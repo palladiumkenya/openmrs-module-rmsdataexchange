@@ -1,13 +1,13 @@
-[![Build Status](https://travis-ci.org/openmrs/openmrs-module-insuranceclaims.svg?branch=master)](https://travis-ci.org/openmrs/openmrs-module-insuranceclaims)
+[![Build Status](https://travis-ci.org/openmrs/openmrs-module-rmsdataexchange.svg?branch=master)](https://travis-ci.org/openmrs/openmrs-module-rmsdataexchange)
 
-# openmrs-module-insuranceclaims
+# openmrs-module-rmsdataexchange
 
 Description
 -----------
-For checking patient insurance enrolment on registration (in external Insurance Management Information System) status and submitting claims (managing patient billing).
+For data sync between openmrs and revenue management systems.
 
 The project WIKI page:
-https://wiki.openmrs.org/display/projects/OpenMRS+insurance+claims+module
+https://wiki.openmrs.org/display/projects/OpenMRS+rmsdataexchange+module
 
 Development
 -----------
