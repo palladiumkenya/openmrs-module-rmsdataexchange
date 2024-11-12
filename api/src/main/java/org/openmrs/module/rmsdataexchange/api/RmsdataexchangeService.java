@@ -13,7 +13,6 @@ import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
 import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.rmsdataexchange.RmsdataexchangeConfig;
-import org.openmrs.module.rmsdataexchange.Item;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -30,19 +29,19 @@ public interface RmsdataexchangeService extends OpenmrsService {
 	 * @return
 	 * @throws APIException
 	 */
-	@Authorized()
-	@Transactional(readOnly = true)
-	Item getItemByUuid(String uuid) throws APIException;
+	// @Authorized()
+	// @Transactional(readOnly = true)
+	// Item getItemByUuid(String uuid) throws APIException;
 	
-	/**
-	 * Saves an item. Sets the owner to superuser, if it is not set. It can be called by users with
-	 * this module's privilege. It is executed in a transaction.
-	 * 
-	 * @param item
-	 * @return
-	 * @throws APIException
-	 */
-	@Authorized(RmsdataexchangeConfig.MODULE_PRIVILEGE)
-	@Transactional
-	Item saveItem(Item item) throws APIException;
+	// /**
+	//  * Saves an item. Sets the owner to superuser, if it is not set. It can be called by users with
+	//  * this module's privilege. It is executed in a transaction.
+	//  * 
+	//  * @param item
+	//  * @return
+	//  * @throws APIException
+	//  */
+	// @Authorized(RmsdataexchangeConfig.MODULE_PRIVILEGE)
+	// @Transactional
+	// Item saveItem(Item item) throws APIException;
 }

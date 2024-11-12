@@ -20,7 +20,7 @@
 	<require_version>${openmrsPlatformVersion}</require_version>
 
 	<require_modules>
-		<require_module version="${appframeworkVersion}">
+		<!-- <require_module version="${appframeworkVersion}">
 			org.openmrs.module.appframework
 		</require_module>
 		<require_module version="${uiframeworkVersion}">
@@ -31,6 +31,9 @@
 		</require_module>
 		<require_module version="${appuiVersion}">
 			org.openmrs.module.appui
+		</require_module> -->
+		<require_module version="${cashierVersion}">
+			org.openmrs.module.kenyaemr.cashier
 		</require_module>
 	</require_modules>
 	
@@ -41,10 +44,58 @@
 	</extension>
 
 	<aware_of_modules>
-		<aware_of_module>org.openmrs.module.legacyui</aware_of_module>
+		<aware_of_module>org.openmrs.module.kenyaemr.cashier</aware_of_module>
 	</aware_of_modules>
 	
-	
+	<advice>
+		<point>org.openmrs.api.PatientService</point>
+		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToRMS</class>
+	</advice>
+
+	<advice>
+		<point>org.openmrs.module.kenyaemr.cashier.api.IBillService</point>
+		<class>org.openmrs.module.rmsdataexchange.advice.NewBillCreationSyncToRMS</class>
+	</advice>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.rms.integration.enabled</property>
+		<description>Is RMS integration enabled - (true) = enabled, (false) = disabled</description>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>${project.parent.artifactId}.rms.integration.endpoint.url</property>
+		<description>RMS integration Endpoint URL</description>
+		<defaultValue>https://siaya.tsconect.com/api</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>${project.parent.artifactId}.rms.integration.username</property>
+		<description>RMS integration Username</description>
+		<defaultValue>pdsl@gmail.com</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>${project.parent.artifactId}.rms.integration.password</property>
+		<description>RMS integration Password</description>
+		<defaultValue>password</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>${project.parent.artifactId}.rms.integration.logging</property>
+		<description>Is RMS integration logging enabled - (true) = enabled, (false) = disabled</description>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>kenyaemr.cashier.chore.syncpatientstorms.done</property>
+		<description>In the RMS integration are all patients synced? - (true) = finished, (false) = not finished</description>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>kenyaemr.cashier.chore.syncbillstorms.done</property>
+		<description>In the RMS integration are all patients synced? - (true) = finished, (false) = not finished</description>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+
+	<chore class="org.openmrs.module.rmsdataexchange.chore.SyncPatientsToRMS" />
+	<chore class="org.openmrs.module.rmsdataexchange.chore.SyncBillsToRMS" />
+
 	<!-- AOP
 	<advice>
 		<point>org.openmrs.api.FormService</point>

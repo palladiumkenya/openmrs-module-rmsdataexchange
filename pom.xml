@@ -28,16 +28,39 @@
 		<module>omod</module>
 	</modules>
 
+	<properties>
+		<javaVersion>1.8</javaVersion>
+		<openmrsPlatformVersion>2.6.1</openmrsPlatformVersion>
+		<cashierVersion>4.2.0</cashierVersion>
+		<stockManagementVersion>1.0.2-SNAPSHOT</stockManagementVersion>
+	</properties>
+
 	<dependencyManagement>
 		<dependencies>
-			<!-- Importing versions from refapp distro -->
-            <dependency>
-                <groupId>org.openmrs.distro</groupId>
-                <artifactId>referenceapplication</artifactId>
-                <version>2.4</version>
-                <type>pom</type>
-                <scope>import</scope>
+			<!-- Importing dependencies -->
+
+			<dependency>
+                <groupId>org.openmrs.module</groupId>
+                <artifactId>kenyaemr.cashier-api</artifactId>
+                <version>${cashierVersion}</version>
+				<scope>provided</scope>
             </dependency>
+
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>stockmanagement-api</artifactId>
+				<version>${stockManagementVersion}</version>
+				<type>jar</type>
+				<scope>provided</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>stockmanagement-omod</artifactId>
+				<version>${stockManagementVersion}</version>
+				<type>jar</type>
+				<scope>provided</scope>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -48,6 +71,10 @@
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>3.8.1</version>
+					<configuration>
+						<source>${javaVersion}</source>
+						<target>${javaVersion}</target>
+					</configuration>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -207,7 +234,5 @@
 		</pluginRepository>
 	</pluginRepositories>
 
-	<properties>
-		<openmrsPlatformVersion>1.11.6</openmrsPlatformVersion>
-	</properties>
+	
 </project>

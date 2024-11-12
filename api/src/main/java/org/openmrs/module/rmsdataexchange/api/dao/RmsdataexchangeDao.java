@@ -9,10 +9,18 @@
  */
 package org.openmrs.module.rmsdataexchange.api.dao;
 
+import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.List;
+
+import org.hibernate.CacheMode;
 import org.hibernate.criterion.Restrictions;
 import org.openmrs.api.db.hibernate.DbSession;
 import org.openmrs.api.db.hibernate.DbSessionFactory;
-import org.openmrs.module.rmsdataexchange.Item;
+import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
+import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
+import org.openmrs.module.kenyaemr.cashier.api.model.PaymentMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -26,12 +34,54 @@ public class RmsdataexchangeDao {
 		return sessionFactory.getCurrentSession();
 	}
 	
-	public Item getItemByUuid(String uuid) {
-		return (Item) getSession().createCriteria(Item.class).add(Restrictions.eq("uuid", uuid)).uniqueResult();
-	}
+	// public Item getItemByUuid(String uuid) {
+	// 	return (Item) getSession().createCriteria(Item.class).add(Restrictions.eq("uuid", uuid)).uniqueResult();
+	// }
 	
-	public Item saveItem(Item item) {
-		getSession().saveOrUpdate(item);
-		return item;
+	// public Item saveItem(Item item) {
+	// 	getSession().saveOrUpdate(item);
+	// 	return item;
+	// }
+	
+	// @Override
+	@SuppressWarnings("unchecked")
+	public Set<Payment> getPaymentsByBillId(Integer billId) {
+		// Get the current Hibernate session from DbSessionFactory
+        DbSession session = getSession();
+        
+        // Ensure no caching is used by ignoring the cache
+        session.setCacheMode(CacheMode.IGNORE);
+
+		String sqlQuery = "SELECT cbp.bill_payment_id, cbp.uuid, cbp.bill_id, cbp.payment_mode_id, cbp.amount_tendered, cbp.amount FROM cashier_bill cb inner join cashier_bill_payment cbp on cbp.bill_id = cb.bill_id and cb.bill_id =:billId";
+
+		// Execute the query and fetch the result
+        List<Object[]> resultList = session.createSQLQuery(sqlQuery)
+                                           .setParameter("billId", billId)
+                                           .list();
+		
+		System.out.println("RMS Sync Cashier Module: Payments got SQL payments: " + resultList.size());
+										   
+		// Create a Set to hold the resulting Patient objects
+        Set<Payment> payments = new HashSet<>();
+
+        // Iterate through the results and map them to Patient objects
+        for (Object[] row : resultList) {
+            Payment payment = new Payment();
+            payment.setId((Integer) row[0]);  // payment_id
+			// System.out.println("RMS Sync Cashier Module: Payments got SQL payments: injecting ID" + (Integer) row[0]);
+            payment.setUuid((String) row[1]); // payment uuid
+			// System.out.println("RMS Sync Cashier Module: Payments got SQL payments: injecting UUID" + (String) row[1]);
+			Bill newBill = new Bill();
+			newBill.setId(billId);
+			payment.setBill(newBill); // bill
+			PaymentMode newPaymentMode = new PaymentMode();
+			newPaymentMode.setId((Integer) row[3]);
+			payment.setInstanceType(newPaymentMode); // payment mode
+			payment.setAmountTendered((BigDecimal) row[4]); //Amount Tendered
+			payment.setAmount((BigDecimal) row[5]); //Total Amount
+            payments.add(payment);
+        }
+
+		return(payments);
 	}
 }

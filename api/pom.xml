@@ -10,5 +10,23 @@
 	<artifactId>rmsdataexchange-api</artifactId>
 	<packaging>jar</packaging>
 	<name>Rmsdataexchange API</name>
-	<description>API project for Rmsdataexchange</description>
+	<description>API project for RMS data exchange</description>
+
+	<dependencies>
+        <dependency>
+            <groupId>org.openmrs.web</groupId>
+            <artifactId>openmrs-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openmrs.module</groupId>
+            <artifactId>kenyaemr.cashier-api</artifactId>
+        </dependency>
+
+		<dependency>
+			<groupId>org.openmrs.module</groupId>
+			<artifactId>stockmanagement-api</artifactId>
+		</dependency>
+
+    </dependencies>
 </project>
