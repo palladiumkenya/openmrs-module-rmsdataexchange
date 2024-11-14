@@ -161,7 +161,7 @@ public class SyncPatientsToRMS {
 		try {
 			if (patient != null) {
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: New patient created: "
+					System.out.println("rmsdataexchange Module: New patient created: "
 					        + patient.getPersonName().getFullName() + ", Age: " + patient.getAge());
 				SimpleObject payloadPrep = new SimpleObject();
 				payloadPrep.put("first_name", patient.getPersonName().getGivenName());
@@ -177,7 +177,7 @@ public class SyncPatientsToRMS {
 					if (piNatId != null) {
 						natID = piNatId.getIdentifier();
 						if (debugMode)
-							System.err.println("RMS Sync Cashier Module: Got the national id as: " + natID);
+							System.err.println("rmsdataexchange Module: Got the national id as: " + natID);
 					}
 				}
 				payloadPrep.put("id_number", natID);
@@ -191,15 +191,15 @@ public class SyncPatientsToRMS {
 				        : (patient.getGender().equalsIgnoreCase("F") ? "Female" : "")) : "");
 				ret = payloadPrep.toJson();
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Got patient registration details: " + ret);
+					System.out.println("rmsdataexchange Module: Got patient registration details: " + ret);
 			} else {
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: patient is null");
+					System.out.println("rmsdataexchange Module: patient is null");
 			}
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: Error getting new patient payload: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error getting new patient payload: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		
@@ -220,13 +220,13 @@ public class SyncPatientsToRMS {
 		HttpsURLConnection connection = null;
 		try {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: using payload: " + payload);
+				System.out.println("rmsdataexchange Module: using payload: " + payload);
 			
 			// Create URL
 			String baseURL = AdviceUtils.getRMSEndpointURL();
 			String completeURL = baseURL + "/login";
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: Auth URL: " + completeURL);
+				System.out.println("rmsdataexchange Module: Auth URL: " + completeURL);
 			URL url = new URL(completeURL);
 			String rmsUser = AdviceUtils.getRMSAuthUserName();
 			String rmsPassword = AdviceUtils.getRMSAuthPassword();
@@ -262,7 +262,7 @@ public class SyncPatientsToRMS {
 				
 				String returnResponse = response.toString();
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Got Auth Response as: " + returnResponse);
+					System.out.println("rmsdataexchange Module: Got Auth Response as: " + returnResponse);
 				
 				// Extract the token and token expiry date
 				ObjectMapper mapper = new ObjectMapper();
@@ -282,7 +282,7 @@ public class SyncPatientsToRMS {
 				}
 				catch (Exception e) {
 					if (debugMode)
-						System.err.println("RMS Sync Cashier Module: Error getting auth token: " + e.getMessage());
+						System.err.println("rmsdataexchange Module: Error getting auth token: " + e.getMessage());
 					e.printStackTrace();
 				}
 				
@@ -291,11 +291,11 @@ public class SyncPatientsToRMS {
 						// We send the payload to RMS
 						if (debugMode)
 							System.err
-							        .println("RMS Sync Cashier Module: We got the Auth token. Now sending the patient registration details. Token: "
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the patient registration details. Token: "
 							                + token);
 						String finalUrl = baseURL + "/create-patient-profile";
 						if (debugMode)
-							System.out.println("RMS Sync Cashier Module: Final patient registration URL: " + finalUrl);
+							System.out.println("rmsdataexchange Module: Final patient registration URL: " + finalUrl);
 						URL finUrl = new URL(finalUrl);
 						
 						connection = (HttpsURLConnection) finUrl.openConnection();
@@ -326,7 +326,7 @@ public class SyncPatientsToRMS {
 							
 							String finalReturnResponse = finalResponse.toString();
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Got patient registration Response as: "
+								System.out.println("rmsdataexchange Module: Got patient registration Response as: "
 								        + finalReturnResponse);
 							
 							ObjectMapper finalMapper = new ObjectMapper();
@@ -345,13 +345,13 @@ public class SyncPatientsToRMS {
 								
 								if (debugMode)
 									System.err
-									        .println("RMS Sync Cashier Module: Got patient registration final response: success: "
+									        .println("rmsdataexchange Module: Got patient registration final response: success: "
 									                + success + " message: " + message);
 							}
 							catch (Exception e) {
 								if (debugMode)
 									System.err
-									        .println("RMS Sync Cashier Module: Error getting patient registration final response: "
+									        .println("rmsdataexchange Module: Error getting patient registration final response: "
 									                + e.getMessage());
 								e.printStackTrace();
 							}
@@ -362,26 +362,26 @@ public class SyncPatientsToRMS {
 							
 						} else {
 							if (debugMode)
-								System.err.println("RMS Sync Cashier Module: Failed to send final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send final payload: "
 								        + finalResponseCode);
 						}
 					}
 					catch (Exception em) {
 						if (debugMode)
-							System.err.println("RMS Sync Cashier Module: Error. Failed to send the final payload: "
+							System.err.println("rmsdataexchange Module: Error. Failed to send the final payload: "
 							        + em.getMessage());
 						em.printStackTrace();
 					}
 				}
 			} else {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: Failed to get auth: " + responseCode);
+					System.err.println("rmsdataexchange Module: Failed to get auth: " + responseCode);
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: Error. Failed to get auth token: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		

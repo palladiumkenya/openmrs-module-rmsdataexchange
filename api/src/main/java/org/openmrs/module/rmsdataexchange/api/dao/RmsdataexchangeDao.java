@@ -34,15 +34,6 @@ public class RmsdataexchangeDao {
 		return sessionFactory.getCurrentSession();
 	}
 	
-	// public Item getItemByUuid(String uuid) {
-	// 	return (Item) getSession().createCriteria(Item.class).add(Restrictions.eq("uuid", uuid)).uniqueResult();
-	// }
-	
-	// public Item saveItem(Item item) {
-	// 	getSession().saveOrUpdate(item);
-	// 	return item;
-	// }
-	
 	// @Override
 	@SuppressWarnings("unchecked")
 	public Set<Payment> getPaymentsByBillId(Integer billId) {
@@ -52,25 +43,23 @@ public class RmsdataexchangeDao {
         // Ensure no caching is used by ignoring the cache
         session.setCacheMode(CacheMode.IGNORE);
 
-		String sqlQuery = "SELECT cbp.bill_payment_id, cbp.uuid, cbp.bill_id, cbp.payment_mode_id, cbp.amount_tendered, cbp.amount FROM cashier_bill cb inner join cashier_bill_payment cbp on cbp.bill_id = cb.bill_id and cb.bill_id =:billId";
+		String sqlQuery = "SELECT distinct cbp.bill_payment_id, cbp.uuid, cbp.bill_id, cbp.payment_mode_id, cbp.amount_tendered, cbp.amount FROM cashier_bill cb inner join cashier_bill_payment cbp on cbp.bill_id = cb.bill_id and cb.bill_id =:billId";
 
 		// Execute the query and fetch the result
         List<Object[]> resultList = session.createSQLQuery(sqlQuery)
                                            .setParameter("billId", billId)
                                            .list();
 		
-		System.out.println("RMS Sync Cashier Module: Payments got SQL payments: " + resultList.size());
+		System.out.println("rmsdataexchange Module: Payments got SQL payments: " + resultList.size());
 										   
-		// Create a Set to hold the resulting Patient objects
+		// Create a Set to hold the resulting Payment objects
         Set<Payment> payments = new HashSet<>();
 
-        // Iterate through the results and map them to Patient objects
+        // Iterate through the results and map them to Payment objects
         for (Object[] row : resultList) {
             Payment payment = new Payment();
             payment.setId((Integer) row[0]);  // payment_id
-			// System.out.println("RMS Sync Cashier Module: Payments got SQL payments: injecting ID" + (Integer) row[0]);
             payment.setUuid((String) row[1]); // payment uuid
-			// System.out.println("RMS Sync Cashier Module: Payments got SQL payments: injecting UUID" + (String) row[1]);
 			Bill newBill = new Bill();
 			newBill.setId(billId);
 			payment.setBill(newBill); // bill

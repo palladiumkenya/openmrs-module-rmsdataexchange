@@ -12,7 +12,7 @@
 	<artifactId>rmsdataexchange</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
-	<name>Rmsdataexchange</name>
+	<name>RMS Data Exchange</name>
 	<description>RMS Data Exchange</description>
 
 	<url>https://wiki.openmrs.org/x/FQ4z</url>
@@ -31,8 +31,8 @@
 	<properties>
 		<javaVersion>1.8</javaVersion>
 		<openmrsPlatformVersion>2.6.1</openmrsPlatformVersion>
-		<cashierVersion>4.2.0</cashierVersion>
-		<stockManagementVersion>1.0.2-SNAPSHOT</stockManagementVersion>
+		<cashierVersion>4.2.2-SNAPSHOT</cashierVersion>
+		<stockManagementVersion>2.0.2-SNAPSHOT</stockManagementVersion>
 	</properties>
 
 	<dependencyManagement>
@@ -61,6 +61,7 @@
 				<type>jar</type>
 				<scope>provided</scope>
 			</dependency>
+
 		</dependencies>
 	</dependencyManagement>
 

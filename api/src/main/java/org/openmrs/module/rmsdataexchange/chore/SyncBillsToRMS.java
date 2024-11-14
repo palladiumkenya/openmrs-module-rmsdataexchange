@@ -166,7 +166,7 @@ public class SyncBillsToRMS {
 			Context.openSession();
 			if (bill != null) {
 				if(debugMode) System.out.println(
-					"RMS Sync Cashier Module: New bill created: UUID" + bill.getUuid() + ", Total: " + bill.getTotal());
+					"rmsdataexchange Module: New bill created: UUID" + bill.getUuid() + ", Total: " + bill.getTotal());
 				SimpleObject payloadPrep = new SimpleObject();
 				payloadPrep.put("bill_reference", bill.getUuid());
 				payloadPrep.put("total_cost", bill.getTotal());
@@ -196,12 +196,12 @@ public class SyncBillsToRMS {
 				}
 				payloadPrep.put("bill_items", items);
 				ret = payloadPrep.toJson();
-				if(debugMode) System.out.println("RMS Sync Cashier Module: Got bill details: " + ret);
+				if(debugMode) System.out.println("rmsdataexchange Module: Got bill details: " + ret);
 			} else {
-				if(debugMode) System.out.println("RMS Sync Cashier Module: bill is null");
+				if(debugMode) System.out.println("rmsdataexchange Module: bill is null");
 			}
 		} catch (Exception ex) {
-			if(debugMode) System.err.println("RMS Sync Cashier Module: Error getting new bill payload: " + ex.getMessage());
+			if(debugMode) System.err.println("rmsdataexchange Module: Error getting new bill payload: " + ex.getMessage());
             ex.printStackTrace();
 		} finally {
             Context.closeSession();
@@ -224,13 +224,13 @@ public class SyncBillsToRMS {
 		HttpsURLConnection connection = null;
 		try {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: using bill payload: " + payload);
+				System.out.println("rmsdataexchange Module: using bill payload: " + payload);
 			
 			// Create URL
 			String baseURL = AdviceUtils.getRMSEndpointURL();
 			String completeURL = baseURL + "/login";
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: Auth URL: " + completeURL);
+				System.out.println("rmsdataexchange Module: Auth URL: " + completeURL);
 			URL url = new URL(completeURL);
 			String rmsUser = AdviceUtils.getRMSAuthUserName();
 			String rmsPassword = AdviceUtils.getRMSAuthPassword();
@@ -266,7 +266,7 @@ public class SyncBillsToRMS {
 				
 				String returnResponse = response.toString();
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Got Auth Response as: " + returnResponse);
+					System.out.println("rmsdataexchange Module: Got Auth Response as: " + returnResponse);
 				
 				// Extract the token and token expiry date
 				ObjectMapper mapper = new ObjectMapper();
@@ -286,7 +286,7 @@ public class SyncBillsToRMS {
 				}
 				catch (Exception e) {
 					if (debugMode)
-						System.err.println("RMS Sync Cashier Module: Error getting auth token: " + e.getMessage());
+						System.err.println("rmsdataexchange Module: Error getting auth token: " + e.getMessage());
 					e.printStackTrace();
 				}
 				
@@ -295,11 +295,11 @@ public class SyncBillsToRMS {
 						// We send the payload to RMS
 						if (debugMode)
 							System.err
-							        .println("RMS Sync Cashier Module: We got the Auth token. Now sending the new bill details. Token: "
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill details. Token: "
 							                + token);
 						String finalUrl = baseURL + "/create-bill";
 						if (debugMode)
-							System.out.println("RMS Sync Cashier Module: Final Create Bill URL: " + finalUrl);
+							System.out.println("rmsdataexchange Module: Final Create Bill URL: " + finalUrl);
 						URL finUrl = new URL(finalUrl);
 						
 						connection = (HttpsURLConnection) finUrl.openConnection();
@@ -330,7 +330,7 @@ public class SyncBillsToRMS {
 							
 							String finalReturnResponse = finalResponse.toString();
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Got New Bill Response as: "
+								System.out.println("rmsdataexchange Module: Got New Bill Response as: "
 								        + finalReturnResponse);
 							
 							ObjectMapper finalMapper = new ObjectMapper();
@@ -348,12 +348,12 @@ public class SyncBillsToRMS {
 								}
 								
 								if (debugMode)
-									System.err.println("RMS Sync Cashier Module: Got New Bill final response: success: "
+									System.err.println("rmsdataexchange Module: Got New Bill final response: success: "
 									        + success + " message: " + message);
 							}
 							catch (Exception e) {
 								if (debugMode)
-									System.err.println("RMS Sync Cashier Module: Error getting New Bill final response: "
+									System.err.println("rmsdataexchange Module: Error getting New Bill final response: "
 									        + e.getMessage());
 								e.printStackTrace();
 							}
@@ -364,26 +364,26 @@ public class SyncBillsToRMS {
 							
 						} else {
 							if (debugMode)
-								System.err.println("RMS Sync Cashier Module: Failed to send New Bill final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send New Bill final payload: "
 								        + finalResponseCode);
 						}
 					}
 					catch (Exception em) {
 						if (debugMode)
-							System.err.println("RMS Sync Cashier Module: Error. Failed to send the New Bill final payload: "
+							System.err.println("rmsdataexchange Module: Error. Failed to send the New Bill final payload: "
 							        + em.getMessage());
 						em.printStackTrace();
 					}
 				}
 			} else {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: Failed to get auth: " + responseCode);
+					System.err.println("rmsdataexchange Module: Failed to get auth: " + responseCode);
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: Error. Failed to get auth token: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		
@@ -402,7 +402,7 @@ public class SyncBillsToRMS {
 		
 		if (payment != null) {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: New bill payment created: UUID: " + payment.getUuid()
+				System.out.println("rmsdataexchange Module: New bill payment created: UUID: " + payment.getUuid()
 				        + ", Amount Tendered: " + payment.getAmountTendered());
 			SimpleObject payloadPrep = new SimpleObject();
 			payloadPrep.put("bill_reference", payment.getBill().getUuid());
@@ -412,10 +412,10 @@ public class SyncBillsToRMS {
 			
 			ret = payloadPrep.toJson();
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: Got payment details: " + ret);
+				System.out.println("rmsdataexchange Module: Got payment details: " + ret);
 		} else {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: payment is null");
+				System.out.println("rmsdataexchange Module: payment is null");
 		}
 		return (ret);
 	}
@@ -436,13 +436,13 @@ public class SyncBillsToRMS {
 		HttpsURLConnection connection = null;
 		try {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: using payment payload: " + payload);
+				System.out.println("rmsdataexchange Module: using payment payload: " + payload);
 			
 			// Create URL
 			String baseURL = AdviceUtils.getRMSEndpointURL();
 			String completeURL = baseURL + "/login";
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: Auth URL: " + completeURL);
+				System.out.println("rmsdataexchange Module: Auth URL: " + completeURL);
 			URL url = new URL(completeURL);
 			String rmsUser = AdviceUtils.getRMSAuthUserName();
 			String rmsPassword = AdviceUtils.getRMSAuthPassword();
@@ -478,7 +478,7 @@ public class SyncBillsToRMS {
 				
 				String returnResponse = response.toString();
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Got Auth Response as: " + returnResponse);
+					System.out.println("rmsdataexchange Module: Got Auth Response as: " + returnResponse);
 				
 				// Extract the token and token expiry date
 				ObjectMapper mapper = new ObjectMapper();
@@ -498,7 +498,7 @@ public class SyncBillsToRMS {
 				}
 				catch (Exception e) {
 					if (debugMode)
-						System.err.println("RMS Sync Cashier Module: Error getting auth token: " + e.getMessage());
+						System.err.println("rmsdataexchange Module: Error getting auth token: " + e.getMessage());
 					e.printStackTrace();
 				}
 				
@@ -507,11 +507,11 @@ public class SyncBillsToRMS {
 						// We send the payload to RMS
 						if (debugMode)
 							System.out
-							        .println("RMS Sync Cashier Module: We got the Auth token. Now sending the new bill details. Token: "
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill details. Token: "
 							                + token);
 						String finalUrl = baseURL + "/bill-payment";
 						if (debugMode)
-							System.out.println("RMS Sync Cashier Module: Final Create Payment URL: " + finalUrl);
+							System.out.println("rmsdataexchange Module: Final Create Payment URL: " + finalUrl);
 						URL finUrl = new URL(finalUrl);
 						
 						connection = (HttpsURLConnection) finUrl.openConnection();
@@ -542,7 +542,7 @@ public class SyncBillsToRMS {
 							
 							String finalReturnResponse = finalResponse.toString();
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Got New Payment Response as: "
+								System.out.println("rmsdataexchange Module: Got New Payment Response as: "
 								        + finalReturnResponse);
 							
 							ObjectMapper finalMapper = new ObjectMapper();
@@ -560,12 +560,12 @@ public class SyncBillsToRMS {
 								}
 								
 								if (debugMode)
-									System.out.println("RMS Sync Cashier Module: Got New Payment final response: success: "
+									System.out.println("rmsdataexchange Module: Got New Payment final response: success: "
 									        + success + " message: " + message);
 							}
 							catch (Exception e) {
 								if (debugMode)
-									System.err.println("RMS Sync Cashier Module: Error getting New Payment final response: "
+									System.err.println("rmsdataexchange Module: Error getting New Payment final response: "
 									        + e.getMessage());
 								e.printStackTrace();
 							}
@@ -576,27 +576,27 @@ public class SyncBillsToRMS {
 							
 						} else {
 							if (debugMode)
-								System.err.println("RMS Sync Cashier Module: Failed to send New Payment final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send New Payment final payload: "
 								        + finalResponseCode);
 						}
 					}
 					catch (Exception em) {
 						if (debugMode)
 							System.err
-							        .println("RMS Sync Cashier Module: Error. Failed to send the New Payment final payload: "
+							        .println("rmsdataexchange Module: Error. Failed to send the New Payment final payload: "
 							                + em.getMessage());
 						em.printStackTrace();
 					}
 				}
 			} else {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: Failed to get auth: " + responseCode);
+					System.err.println("rmsdataexchange Module: Failed to get auth: " + responseCode);
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: Error. Failed to get auth token: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		

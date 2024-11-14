@@ -11,6 +11,7 @@ package org.openmrs.module.rmsdataexchange;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.Obs;
 import org.openmrs.module.BaseModuleActivator;
 
 /**
@@ -24,14 +25,41 @@ public class RmsdataexchangeActivator extends BaseModuleActivator {
 	 * @see #started()
 	 */
 	public void started() {
-		log.info("Started Rmsdataexchange");
+		log.info("Started rmsdataexchange Module");
+		System.err.println("rmsdataexchange Module Started");
 	}
 	
 	/**
 	 * @see #shutdown()
 	 */
 	public void shutdown() {
-		log.info("Shutdown Rmsdataexchange");
+		log.info("Shutdown smsdataexchange Module");
+		System.err.println("rmsdataexchange Module Shutdown");
+	}
+	
+	@Override
+	public void stopped() {
+		System.err.println("rmsdataexchange Module stopped");
+	}
+	
+	@Override
+	public void willRefreshContext() {
+		System.err.println("rmsdataexchange Module refreshing context");
+	}
+	
+	@Override
+	public void willStart() {
+		System.err.println("rmsdataexchange Module starting");
+	}
+	
+	@Override
+	public void willStop() {
+		System.err.println("rmsdataexchange Module stopping");
+	}
+	
+	@Override
+	public void contextRefreshed() {
+		System.err.println("rmsdataexchange finished refreshing context");
 	}
 	
 }

@@ -23,7 +23,28 @@
   		    http://www.springframework.org/schema/util
   		    http://www.springframework.org/schema/util/spring-util-3.0.xsd">
 
-    <context:component-scan base-package="org.openmrs.module.rmsdataexchange" />
+    <!-- uncomment this to enable annotations -->
+    <!-- <bean class="org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator"/> -->
+    <!-- <context:annotation-config />
+    <aop:aspectj-autoproxy /> -->
+    <!-- <bean class="org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator"/> -->
+    <!-- <context:component-scan base-package="org.openmrs.module.rmsdataexchange" /> -->
+
+    <!-- Enable AspectJ auto proxy -->
+    <!-- <aop:aspectj-autoproxy /> -->
+
+    <!-- Define the aspect -->
+    <!-- <bean id="savePaymentAspect" class="org.openmrs.module.rmsdataexchange.advice.SaveInterceptorAspect" /> -->
+
+    <!-- Configure the aspect and pointcut -->
+    <!-- <aop:config>
+        <aop:aspect id="aroundAspect" ref="savePaymentAspect">
+            <aop:pointcut id="aroundPointcut" expression="execution(* org.openmrs.module.kenyaemr.cashier.api.IBillService.save(org.openmrs.module.kenyaemr.cashier.api.model.Bill))" />
+            <aop:pointcut id="aroundPointcut" expression="execution(* org.openmrs.module.kenyaemr.cashier.api.IBillService.save(..))" />
+            <aop:around method="aroundSave" pointcut-ref="aroundPointcut" />
+        </aop:aspect>
+    </aop:config> -->
+
 
     <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
     which set audit info like dateCreated, changedBy, etc.-->
@@ -56,20 +77,26 @@
         </property>
     </bean>
 
-    <!-- Define the billSavePaymentAspect bean -->
-    <bean id="billSavePaymentAspect" class="org.openmrs.module.rmsdataexchange.advice.NewBillPaymentSyncToRMS">
-		<property name="billService" ref="cashierBillService"/>
+    <!-- Define the PaymentInterceptor bean -->
+    <bean id="paymentInterceptor" class="org.openmrs.module.rmsdataexchange.advice.PaymentInterceptor">
+		<!-- <property name="billService" ref="cashierBillService"/> -->
+        <property name="billService" ref="rmsdataexchange.CashierBillService"/>
 	</bean>
 
+    <!-- Define the billSavePaymentAspect bean -->
+    <!-- <bean id="billSavePaymentAspect" class="org.openmrs.module.rmsdataexchange.advice.NewBillPaymentSyncToRMS">
+		<property name="billService" ref="cashierBillService"/>
+	</bean> -->
+
     <!-- Create a proxy for BillService -->
-    <bean id="cashierBillService" class="org.springframework.aop.framework.ProxyFactoryBean">
+    <!-- <bean id="cashierBillService" class="org.springframework.aop.framework.ProxyFactoryBean">
         <property name="target" ref="rmsdataexchange.CashierBillService"/>
         <property name="interceptorNames">
             <list>
                 <value>billSavePaymentAspect</value>
             </list>
         </property>
-    </bean>
+    </bean> -->
 
     <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
     which set audit info like dateCreated, changedBy, etc.-->
@@ -101,4 +128,5 @@
             </list>
         </property>
     </bean>
+
 </beans>

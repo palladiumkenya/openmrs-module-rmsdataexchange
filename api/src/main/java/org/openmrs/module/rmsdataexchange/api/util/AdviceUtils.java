@@ -45,11 +45,11 @@ public class AdviceUtils {
         // Add elements from newSet that are not in oldSet based on amount comparison
         for (Payment item1 : oldSet) {
             for (Payment item2 : newSet) {
-                if(debugMode) System.out.println("RMS Sync Cashier Module: Payments comparison: Oldset comparing item uuid " + item2.getAmountTendered() + " with Newset: " + item1.getAmountTendered());
+                if(debugMode) System.out.println("rmsdataexchange Module: Payments comparison: Oldset comparing item uuid " + item2.getAmountTendered() + " with Newset: " + item1.getAmountTendered());
                 // BigDecimal behaves different. You cannot use ==
                 if (item1.getAmountTendered().compareTo(item2.getAmountTendered()) == 0) {
-                    if(debugMode) System.out.println("RMS Sync Cashier Module: Payments comparison: Found a match: " + item2.getAmountTendered()+ " and: " + item1.getAmountTendered());
-                    if(debugMode) System.out.println("RMS Sync Cashier Module: Payments comparison: Removing item amount " + item2.getAmountTendered() + " size before: " + result.size());
+                    if(debugMode) System.out.println("rmsdataexchange Module: Payments comparison: Found a match: " + item2.getAmountTendered()+ " and: " + item1.getAmountTendered());
+                    if(debugMode) System.out.println("rmsdataexchange Module: Payments comparison: Removing item amount " + item2.getAmountTendered() + " size before: " + result.size());
                     // result.remove(item2);
                     for(Payment test : result) {
                         if (item2.getAmountTendered().compareTo(test.getAmountTendered()) == 0) {
@@ -57,13 +57,13 @@ public class AdviceUtils {
                             break;
                         }
                     }
-                    if(debugMode) System.out.println("RMS Sync Cashier Module: Payments comparison: Removing item: size after: " + result.size());
+                    if(debugMode) System.out.println("rmsdataexchange Module: Payments comparison: Removing item: size after: " + result.size());
                     break;
                 }
             }
         }
 
-        if(debugMode) System.out.println("RMS Sync Cashier Module: Payments comparison: " + result.size());
+        if(debugMode) System.out.println("rmsdataexchange Module: Payments comparison: " + result.size());
 
         return result;
     }

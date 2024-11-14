@@ -48,11 +48,11 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
             if(AdviceUtils.isRMSIntegrationEnabled()) {
                 String methodName = invocation.getMethod().getName();
-                if(debugMode) System.out.println("RMS Sync Cashier Module: method intercepted: " + methodName);
+                if(debugMode) System.out.println("rmsdataexchange Module: method intercepted: " + methodName);
 				Bill oldBill = new Bill();
             
                 if ("save".equalsIgnoreCase(methodName)) {
-                    if(debugMode) System.out.println("RMS Sync Cashier Module: Intercepting save bill method");
+                    if(debugMode) System.out.println("rmsdataexchange Module: Intercepting save bill method");
 
                     Object[] args = invocation.getArguments();
 					Set<Payment> oldPayments = new HashSet<>();
@@ -65,43 +65,51 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
                     }
                     
                     // Proceed with the original method
-                    result = invocation.proceed();
+
+                    try {
+						result = invocation.proceed();
+					} catch(Exception et) {}
 
                     try {
                         Bill newBill = (Bill) result;
 
-						Set<Payment> newPayments = newBill.getPayments();
+						if(result != null && newBill != null) {
+							Set<Payment> newPayments = newBill.getPayments();
 
-                        if(debugMode) System.out.println("RMS Sync Cashier Module: Got a bill edit. checking if it is a payment. OldPayments: " + oldPayments.size() + " NewPayments: " + newPayments.size());
+							if(debugMode) System.out.println("rmsdataexchange Module: Got a bill edit. checking if it is a payment. OldPayments: " + oldPayments.size() + " NewPayments: " + newPayments.size());
 
-                        if(newPayments.size() > oldPayments.size()) {
-                            if(debugMode) System.out.println("RMS Sync Cashier Module: New bill payment detected");
+							if(newPayments.size() > oldPayments.size()) {
+								if(debugMode) System.out.println("rmsdataexchange Module: New bill payment detected");
 
-                            Set<Payment> payments = AdviceUtils.symmetricPaymentDifference(oldPayments, newPayments);
-                            if(debugMode) System.out.println("RMS Sync Cashier Module: New bill payments made: " + payments.size());
+								Set<Payment> payments = AdviceUtils.symmetricPaymentDifference(oldPayments, newPayments);
+								if(debugMode) System.out.println("rmsdataexchange Module: New bill payments made: " + payments.size());
 
-                            for(Payment payment : payments) {
-								// Use a thread to send the data. This frees up the frontend to proceed
-                                syncPaymentRunnable runner = new syncPaymentRunnable(payment);
-								Thread thread = new Thread(runner);
-								thread.start();
-                            }
-                        }
-
+								for(Payment payment : payments) {
+									// Use a thread to send the data. This frees up the frontend to proceed
+									syncPaymentRunnable runner = new syncPaymentRunnable(payment);
+									Thread thread = new Thread(runner);
+									thread.start();
+								}
+							}
+						}
                     } catch(Exception ex) {
-                        if(debugMode) System.err.println("RMS Sync Cashier Module: Error checking for bill payment: " + ex.getMessage());
+                        if(debugMode) System.err.println("rmsdataexchange Module: Error checking for pre bill payments: " + ex.getMessage());
                         ex.printStackTrace();
                     }
                 } else {
-                    if(debugMode) System.out.println("RMS Sync Cashier Module: This is not the save method. We ignore.");
-                    result = invocation.proceed();
+                    if(debugMode) System.out.println("rmsdataexchange Module: This is not the save method. We ignore.");
+                    try {
+						result = invocation.proceed();
+					} catch(Exception et) {}
                 }
             }
         } catch(Exception ex) {
-            if(debugMode) System.err.println("RMS Sync Cashier Module: Error checking for bill payment: " + ex.getMessage());
+            if(debugMode) System.err.println("rmsdataexchange Module: Error checking for post bill payments: " + ex.getMessage());
             ex.printStackTrace();
 			// Any failure in RMS should not cause the payment to fail so we always proceed the invocation
-            result = invocation.proceed();
+			try {
+            	result = invocation.proceed();
+			} catch(Exception et) {}
         }
         
         return (result);
@@ -119,7 +127,7 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 		
 		if (payment != null) {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: New bill payment created: UUID: " + payment.getUuid()
+				System.out.println("rmsdataexchange Module: New bill payment created: UUID: " + payment.getUuid()
 				        + ", Amount Tendered: " + payment.getAmountTendered());
 			SimpleObject payloadPrep = new SimpleObject();
 			payloadPrep.put("bill_reference", payment.getBill().getUuid());
@@ -129,10 +137,10 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 			
 			ret = payloadPrep.toJson();
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: Got payment details: " + ret);
+				System.out.println("rmsdataexchange Module: Got payment details: " + ret);
 		} else {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: payment is null");
+				System.out.println("rmsdataexchange Module: payment is null");
 		}
 		return (ret);
 	}
@@ -153,13 +161,13 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 		HttpsURLConnection connection = null;
 		try {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: using payment payload: " + payload);
+				System.out.println("rmsdataexchange Module: using payment payload: " + payload);
 			
 			// Create URL
 			String baseURL = AdviceUtils.getRMSEndpointURL();
 			String completeURL = baseURL + "/login";
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: Auth URL: " + completeURL);
+				System.out.println("rmsdataexchange Module: Auth URL: " + completeURL);
 			URL url = new URL(completeURL);
 			String rmsUser = AdviceUtils.getRMSAuthUserName();
 			String rmsPassword = AdviceUtils.getRMSAuthPassword();
@@ -195,7 +203,7 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 				
 				String returnResponse = response.toString();
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Got Auth Response as: " + returnResponse);
+					System.out.println("rmsdataexchange Module: Got Auth Response as: " + returnResponse);
 				
 				// Extract the token and token expiry date
 				ObjectMapper mapper = new ObjectMapper();
@@ -215,7 +223,7 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 				}
 				catch (Exception e) {
 					if (debugMode)
-						System.err.println("RMS Sync Cashier Module: Error getting auth token: " + e.getMessage());
+						System.err.println("rmsdataexchange Module: Error getting auth token: " + e.getMessage());
 					e.printStackTrace();
 				}
 				
@@ -224,11 +232,11 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 						// We send the payload to RMS
 						if (debugMode)
 							System.out
-							        .println("RMS Sync Cashier Module: We got the Auth token. Now sending the new bill details. Token: "
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill details. Token: "
 							                + token);
 						String finalUrl = baseURL + "/bill-payment";
 						if (debugMode)
-							System.out.println("RMS Sync Cashier Module: Final Create Payment URL: " + finalUrl);
+							System.out.println("rmsdataexchange Module: Final Create Payment URL: " + finalUrl);
 						URL finUrl = new URL(finalUrl);
 						
 						connection = (HttpsURLConnection) finUrl.openConnection();
@@ -259,7 +267,7 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 							
 							String finalReturnResponse = finalResponse.toString();
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Got New Payment Response as: "
+								System.out.println("rmsdataexchange Module: Got New Payment Response as: "
 								        + finalReturnResponse);
 							
 							ObjectMapper finalMapper = new ObjectMapper();
@@ -277,12 +285,12 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 								}
 								
 								if (debugMode)
-									System.out.println("RMS Sync Cashier Module: Got New Payment final response: success: "
+									System.out.println("rmsdataexchange Module: Got New Payment final response: success: "
 									        + success + " message: " + message);
 							}
 							catch (Exception e) {
 								if (debugMode)
-									System.err.println("RMS Sync Cashier Module: Error getting New Payment final response: "
+									System.err.println("rmsdataexchange Module: Error getting New Payment final response: "
 									        + e.getMessage());
 								e.printStackTrace();
 							}
@@ -293,27 +301,27 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 							
 						} else {
 							if (debugMode)
-								System.err.println("RMS Sync Cashier Module: Failed to send New Payment final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send New Payment final payload: "
 								        + finalResponseCode);
 						}
 					}
 					catch (Exception em) {
 						if (debugMode)
 							System.err
-							        .println("RMS Sync Cashier Module: Error. Failed to send the New Payment final payload: "
+							        .println("rmsdataexchange Module: Error. Failed to send the New Payment final payload: "
 							                + em.getMessage());
 						em.printStackTrace();
 					}
 				}
 			} else {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: Failed to get auth: " + responseCode);
+					System.err.println("rmsdataexchange Module: Failed to get auth: " + responseCode);
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: Error. Failed to get auth token: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		
@@ -339,7 +347,7 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 			
 			try {
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Start sending payment to RMS");
+					System.out.println("rmsdataexchange Module: Start sending payment to RMS");
 				
 				// If the patient doesnt exist, send the patient to RMS
 				if (debugMode)
@@ -355,11 +363,11 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 				sendRMSNewPayment(payment);
 				
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Finished sending payment to RMS");
+					System.out.println("rmsdataexchange Module: Finished sending payment to RMS");
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: Error. Failed to send payment to RMS: " + ex.getMessage());
+					System.err.println("rmsdataexchange Module: Error. Failed to send payment to RMS: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
