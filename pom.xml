@@ -32,12 +32,26 @@
 		<javaVersion>1.8</javaVersion>
 		<openmrsPlatformVersion>2.6.1</openmrsPlatformVersion>
 		<cashierVersion>4.2.2-SNAPSHOT</cashierVersion>
-		<stockManagementVersion>2.0.2-SNAPSHOT</stockManagementVersion>
+		<stockManagementVersion>2.0.1</stockManagementVersion>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
 			<!-- Importing dependencies -->
+
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>webservices.rest-omod</artifactId>
+				<version>2.9</version>
+				<scope>provided</scope>
+			</dependency>
+			
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>webservices.rest-omod-common</artifactId>
+				<version>2.9</version>
+				<scope>provided</scope>
+			</dependency>
 
 			<dependency>
                 <groupId>org.openmrs.module</groupId>

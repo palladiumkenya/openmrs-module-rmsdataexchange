@@ -76,15 +76,15 @@ public class PaymentInterceptor implements MethodBeforeAdvice {
 							System.out.println("rmsdataexchange Module: Payments before: " + paymentsBefore.size());
 						for (Payment payment : paymentsBefore) {
 							if (debugMode)
-							System.out.println("rmsdataexchange Module: Payment before tendered Each: "
-							        + payment.getAmountTendered());
+								System.out.println("rmsdataexchange Module: Payment before tendered Each: "
+								        + payment.getAmountTendered());
 						}
 						if (debugMode)
 							System.out.println("rmsdataexchange Module: Payments after: " + paymentsAfter.size());
 						for (Payment payment : paymentsAfter) {
 							if (debugMode)
-							System.out.println("rmsdataexchange Module: Payment after tendered Each: "
-							        + payment.getAmountTendered());
+								System.out.println("rmsdataexchange Module: Payment after tendered Each: "
+								        + payment.getAmountTendered());
 						}
 						// Prevent the save bill from proceeding
 						throw new WarningThrowable("rmsdataexchange Module: Redirecting to check if there are payments");
