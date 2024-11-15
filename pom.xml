@@ -10,7 +10,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>rmsdataexchange</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.1.2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>RMS Data Exchange</name>
 	<description>RMS Data Exchange</description>
@@ -33,11 +33,26 @@
 		<openmrsPlatformVersion>2.6.1</openmrsPlatformVersion>
 		<cashierVersion>4.2.2-SNAPSHOT</cashierVersion>
 		<stockManagementVersion>2.0.2-SNAPSHOT</stockManagementVersion>
+		<restWebServicesVersion>2.41.0</restWebServicesVersion>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
 			<!-- Importing dependencies -->
+
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>webservices.rest-omod</artifactId>
+				<version>${restWebServicesVersion}</version>
+				<scope>provided</scope>
+			</dependency>
+			
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>webservices.rest-omod-common</artifactId>
+				<version>${restWebServicesVersion}</version>
+				<scope>provided</scope>
+			</dependency>
 
 			<dependency>
                 <groupId>org.openmrs.module</groupId>

@@ -11,7 +11,6 @@ package org.openmrs.module.rmsdataexchange;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.Obs;
 import org.openmrs.module.BaseModuleActivator;
 
 /**

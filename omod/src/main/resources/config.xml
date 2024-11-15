@@ -20,21 +20,15 @@
 	<require_version>${openmrsPlatformVersion}</require_version>
 
 	<require_modules>
-		<!-- <require_module version="${appframeworkVersion}">org.openmrs.module.appframework</require_module> -->
+		<require_module version="${restWebServicesVersion}">org.openmrs.module.webservices.rest</require_module>
 		<require_module version="${stockManagementVersion}">org.openmrs.module.stockmanagement</require_module>
 		<require_module version="${cashierVersion}">
 			org.openmrs.module.kenyaemr.cashier
 		</require_module>
 	</require_modules>
-	
-	<!-- Extensions -->
-	<!-- <extension>
-		<point>org.openmrs.admin.list</point>
-		<class>org.openmrs.module.rmsdataexchange.extension.html.AdminList</class>
-	</extension> -->
 
 	<aware_of_modules>
-		<!-- <aware_of_module>org.openmrs.module.appframework</aware_of_module> -->
+		<aware_of_module>org.openmrs.module.webservices.rest</aware_of_module>
 		<aware_of_module>org.openmrs.module.stockmanagement</aware_of_module>
 		<aware_of_module>org.openmrs.module.kenyaemr.cashier</aware_of_module>
 	</aware_of_modules>
@@ -44,15 +38,10 @@
 		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToRMS</class>
 	</advice>
 
-	<advice>
+	<!-- <advice>
 		<point>org.openmrs.module.kenyaemr.cashier.api.IBillService</point>
 		<class>org.openmrs.module.rmsdataexchange.advice.NewBillCreationSyncToRMS</class>
-	</advice>
-
-	<advice>
-		<point>org.openmrs.module.kenyaemr.cashier.api.IBillService</point>
-		<class>org.openmrs.module.rmsdataexchange.advice.PaymentInterceptor</class>
-	</advice>
+	</advice> -->
 
 	<globalProperty>
 		<property>${project.parent.artifactId}.rms.integration.enabled</property>
@@ -90,65 +79,6 @@
 		<defaultValue>false</defaultValue>
 	</globalProperty>
 
-	<!-- <chore class="org.openmrs.module.rmsdataexchange.chore.SyncPatientsToRMS" />
-	<chore class="org.openmrs.module.rmsdataexchange.chore.SyncBillsToRMS" /> -->
-
-	<!-- AOP
-	<advice>
-		<point>org.openmrs.api.FormService</point>
-		<class>@MODULE_PACKAGE@.advice.DuplicateFormAdvisor</class>
-	</advice>
-	 /AOP -->
-	
-	
-	<!-- Required Privileges 
-	<privilege>
-		<name>Form Entry</name>
-		<description>Allows user to access Form Entry pages/functions</description>
-	</privilege>
-	 /Required Privileges -->
-
-
-	<!-- Required Global Properties 
-	<globalProperty>
-		<property>@MODULE_ID@.someProperty</property>
-		<defaultValue></defaultValue>
-		<description>
-			A description of the global property goes here.  The description
-			should explain enough for administrators to understand the purpose
-			and possible values for the global property.
-		</description>
-	</globalProperty>
-	/Required Global Properties -->
-	
-	<!--
-	<dwr>
-		<allow>
-			<create creator="new" javascript="DWRFormEntryService">
-				<param name="class" value="org.openmrs.module.@MODULE_ID@.web.DWRFormEntryService"/>
-				<include method="enterForm"/>
-			</create>
-		</allow>
-
-		<signatures>
-			<![CDATA[
-			import @MODULE_PACKAGE@.web.DWRFormEntryService;
-			DWRFormEntryService.enterForm(Integer patientId, Integer formId, boolean useEncounter, List<String> fields);
-			]]>
-		</signatures>	
-	</dwr>
-	-->
-	
-	<!-- Servlets -->
-	<!-- Accessed through the url /pageContext()/moduleServlet/<moduleId>/<servlet-name> 
-	<servlet>
-		<servlet-name>formDownload</servlet-name>
-		<servlet-class>@MODULE_PACKAGE@.web.FormDownloadServlet</servlet-class>
-	</servlet>
-	-->
-	<!-- /Servlets -->
-	
-	
 	<!-- Internationalization -->
 	<!-- All message codes should start with @MODULE_ID@.* -->
 	<messages>

@@ -19,9 +19,9 @@ import org.openmrs.module.kenyaemr.cashier.api.IBillService;
 import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.kenyaemr.cashier.api.model.PaymentMode;
-import org.openmrs.module.rmsdataexchange.api.CashierBillService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
 import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 
 /**
  * Detects when a new payment has been made to a bill and syncs to RMS Financial System
@@ -30,13 +30,13 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 	
 	private Boolean debugMode = false;
 	
-	private CashierBillService billService;
+	private RmsdataexchangeService billService;
 	
-	public CashierBillService getBillService() {
+	public RmsdataexchangeService getBillService() {
 		return billService;
 	}
 	
-	public void setBillService(CashierBillService billService) {
+	public void setBillService(RmsdataexchangeService billService) {
 		this.billService = billService;
 	}
 	
@@ -114,6 +114,32 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
         
         return (result);
     }
+	
+	/**
+	 * Send payment to remote RMS system
+	 * 
+	 * @param paymentsBefore payments in the bill before saving
+	 * @param paymentsAfter payments in the bill after saving
+	 */
+	public static void checkPaymentsAndSendToRMS(Set<Payment> oldPayments, Set<Payment> newPayments) {
+		if (newPayments.size() > oldPayments.size()) {
+			Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+			
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: New bill payment detected");
+			
+			Set<Payment> payments = AdviceUtils.symmetricPaymentDifference(oldPayments, newPayments);
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: New bill payments made: " + payments.size());
+			
+			for (Payment payment : payments) {
+				// Use a thread to send the data. This frees up the frontend to proceed
+				syncPaymentRunnable runner = new syncPaymentRunnable(payment);
+				Thread thread = new Thread(runner);
+				thread.start();
+			}
+		}
+	}
 	
 	/**
 	 * Prepare the payment payload
@@ -331,7 +357,7 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 	/**
 	 * A thread to free up the frontend
 	 */
-	private class syncPaymentRunnable implements Runnable {
+	private static class syncPaymentRunnable implements Runnable {
 		
 		Payment payment = new Payment();
 		
