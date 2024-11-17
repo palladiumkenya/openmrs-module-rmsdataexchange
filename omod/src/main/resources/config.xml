@@ -20,6 +20,7 @@
 	<require_version>${openmrsPlatformVersion}</require_version>
 
 	<require_modules>
+		<!-- <require_module version="${metadatadeployVersion}">org.openmrs.module.metadatadeploy</require_module> -->
 		<require_module version="${restWebServicesVersion}">org.openmrs.module.webservices.rest</require_module>
 		<require_module version="${stockManagementVersion}">org.openmrs.module.stockmanagement</require_module>
 		<require_module version="${cashierVersion}">
@@ -28,6 +29,7 @@
 	</require_modules>
 
 	<aware_of_modules>
+		<!-- <aware_of_module>org.openmrs.module.metadatadeploy</aware_of_module> -->
 		<aware_of_module>org.openmrs.module.webservices.rest</aware_of_module>
 		<aware_of_module>org.openmrs.module.stockmanagement</aware_of_module>
 		<aware_of_module>org.openmrs.module.kenyaemr.cashier</aware_of_module>

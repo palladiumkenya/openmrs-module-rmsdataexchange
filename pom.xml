@@ -10,7 +10,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>rmsdataexchange</artifactId>
-	<version>1.1.2-SNAPSHOT</version>
+	<version>1.2.2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>RMS Data Exchange</name>
 	<description>RMS Data Exchange</description>
@@ -34,11 +34,19 @@
 		<cashierVersion>4.2.2-SNAPSHOT</cashierVersion>
 		<stockManagementVersion>2.0.2-SNAPSHOT</stockManagementVersion>
 		<restWebServicesVersion>2.41.0</restWebServicesVersion>
+		<!-- <metadatadeployVersion>1.12.1</metadatadeployVersion> -->
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
 			<!-- Importing dependencies -->
+
+			<!-- <dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>metadatadeploy-api</artifactId>
+				<version>${metadatadeployVersion}</version>
+				<scope>provided</scope>
+			</dependency> -->
 
 			<dependency>
 				<groupId>org.openmrs.module</groupId>

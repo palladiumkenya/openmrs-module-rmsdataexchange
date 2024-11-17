@@ -8,6 +8,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.validation.constraints.NotNull;
@@ -105,13 +106,14 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 				    "49af6cdc-7968-4abb-bf46-de10d7f4859f");
 				String natID = "";
 				if (nationalIDIdentifierType != null) {
-					PatientIdentifier piNatId = patient.getPatientIdentifier(nationalIDIdentifierType);
+					// PatientIdentifier piNatId = patient.getPatientIdentifier(nationalIDIdentifierType);
 					
-					if (piNatId != null) {
-						natID = piNatId.getIdentifier();
-						if (debugMode)
-							System.err.println("rmsdataexchange Module: Got the national id as: " + natID);
-					}
+					// if (piNatId != null) {
+					// 	natID = piNatId.getIdentifier();
+					// 	if (debugMode)
+					// 		System.err.println("rmsdataexchange Module: Got the national id as: " + natID);
+					// }
+					natID = getPatientIdentifier(patient, nationalIDIdentifierType);
 				}
 				payloadPrep.put("id_number", natID);
 				String phoneNumber = patient.getAttribute("Telephone contact") != null ? patient.getAttribute(
@@ -320,6 +322,43 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 			if (debugMode)
 				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
 			ex.printStackTrace();
+		}
+		
+		return (ret);
+	}
+	
+	/**
+	 * Returns the patient identifier
+	 * 
+	 * @param patient
+	 * @param patientIdentifierType
+	 * @return
+	 */
+	private static String getPatientIdentifier(Patient patient, PatientIdentifierType patientIdentifierType) {
+		String ret = "";
+		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		
+		if (patientIdentifierType != null && patient != null) {
+			try {
+				Set<PatientIdentifier> identifiers = patient.getIdentifiers();
+				
+				for (PatientIdentifier patientIdentifier : identifiers) {
+					if (!patientIdentifier.getVoided()
+					        && patientIdentifier.getIdentifierType().equals(patientIdentifierType)) {
+						if (patientIdentifier != null) {
+							ret = patientIdentifier.getIdentifier();
+							if (debugMode)
+								System.err.println("rmsdataexchange Module: Got the identifier as: " + ret);
+							break;
+						}
+					}
+				}
+			}
+			catch (Exception ex) {
+				if (debugMode)
+					System.err.println("rmsdataexchange Module: Getting the identifier: " + ex.getMessage());
+				ex.printStackTrace();
+			}
 		}
 		
 		return (ret);

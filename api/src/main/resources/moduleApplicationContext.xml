@@ -25,7 +25,9 @@
 
     <!-- <context:component-scan base-package="org.openmrs.module.rmsdataexchange"/> -->
 
-    <bean id="rmsdataexchange.RmsdataexchangeConfig" class="org.openmrs.module.rmsdataexchange.RmsdataexchangeConfig" />
+    <!-- <bean id="rmsdataexchange.BeanInterceptorConfig" class="org.openmrs.module.rmsdataexchange.advice.BeanInterceptorConfig" /> -->
+
+    <!-- <bean id="rmsdataexchange.RMSMetadata" class="org.openmrs.module.rmsdataexchange.metadata.RMSMetadata" /> -->
 
     <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
     which set audit info like dateCreated, changedBy, etc.-->
