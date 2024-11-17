@@ -9,7 +9,22 @@
  */
 package org.openmrs.module.rmsdataexchange;
 
+import java.lang.reflect.Proxy;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.openmrs.api.context.Context;
+import org.openmrs.module.kenyaemr.cashier.api.IBillService;
+import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
+import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
+import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.interceptor.TransactionalProxy;
+import org.openmrs.module.rmsdataexchange.advice.NewBillPaymentSyncToRMS;
 
 /**
  * Contains module's config.
@@ -18,4 +33,5 @@ import org.springframework.stereotype.Component;
 public class RmsdataexchangeConfig {
 	
 	public final static String MODULE_PRIVILEGE = "Rmsdataexchange Privilege";
+	
 }

@@ -9,11 +9,16 @@
  */
 package org.openmrs.module.rmsdataexchange.api.impl;
 
+import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
 import org.openmrs.api.UserService;
 import org.openmrs.api.impl.BaseOpenmrsService;
+import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.dao.RmsdataexchangeDao;
+import org.springframework.transaction.annotation.Transactional;
+import org.openmrs.module.kenyaemr.cashier.api.util.PrivilegeConstants;
+import java.util.Set;
 
 public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements RmsdataexchangeService {
 	
@@ -35,17 +40,11 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 		this.userService = userService;
 	}
 	
-	// @Override
-	// public Item getItemByUuid(String uuid) throws APIException {
-	// 	return dao.getItemByUuid(uuid);
-	// }
-	
-	// @Override
-	// public Item saveItem(Item item) throws APIException {
-	// 	if (item.getOwner() == null) {
-	// 		item.setOwner(userService.getUser(1));
-	// 	}
-	
-	// 	return dao.saveItem(item);
-	// }
+	@Override
+	@Authorized({ PrivilegeConstants.VIEW_BILLS })
+	@Transactional(readOnly = true)
+	public Set<Payment> getPaymentsByBillId(Integer billId) {
+		Set<Payment> payments = dao.getPaymentsByBillId(billId);
+		return payments;
+	}
 }

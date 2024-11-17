@@ -44,12 +44,12 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 					
 					Date billCreationDate = bill.getDateCreated();
 					if (debugMode)
-						System.out.println("RMS Sync Cashier Module: bill was created on: " + billCreationDate);
+						System.out.println("rmsdataexchange Module: bill was created on: " + billCreationDate);
 					
 					if (billCreationDate != null && AdviceUtils.checkIfCreateModetOrEditMode(billCreationDate)) {
 						// CREATE Mode
 						if (debugMode)
-							System.out.println("RMS Sync Cashier Module: New Bill being created");
+							System.out.println("rmsdataexchange Module: New Bill being created");
 						// Use a thread to send the data. This frees up the frontend to proceed
 						syncBillRunnable runner = new syncBillRunnable(bill);
 						Thread thread = new Thread(runner);
@@ -57,14 +57,14 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 					} else {
 						// EDIT Mode
 						if (debugMode)
-							System.out.println("RMS Sync Cashier Module: Bill being edited. We ignore");
+							System.out.println("rmsdataexchange Module: Bill being edited. We ignore");
 					}
 				}
 			}
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: Error getting new Bill: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error getting new Bill: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 	}
@@ -77,7 +77,7 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 			Context.openSession();
 			if (bill != null) {
 				if(debugMode) System.out.println(
-					"RMS Sync Cashier Module: New bill created: UUID" + bill.getUuid() + ", Total: " + bill.getTotal());
+					"rmsdataexchange Module: New bill created: UUID" + bill.getUuid() + ", Total: " + bill.getTotal());
 				SimpleObject payloadPrep = new SimpleObject();
 				payloadPrep.put("bill_reference", bill.getUuid());
 				payloadPrep.put("total_cost", bill.getTotal());
@@ -107,12 +107,12 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 				}
 				payloadPrep.put("bill_items", items);
 				ret = payloadPrep.toJson();
-				if(debugMode) System.out.println("RMS Sync Cashier Module: Got bill details: " + ret);
+				if(debugMode) System.out.println("rmsdataexchange Module: Got bill details: " + ret);
 			} else {
-				if(debugMode) System.out.println("RMS Sync Cashier Module: bill is null");
+				if(debugMode) System.out.println("rmsdataexchange Module: bill is null");
 			}
 		} catch (Exception ex) {
-			if(debugMode) System.err.println("RMS Sync Cashier Module: Error getting new bill payload: " + ex.getMessage());
+			if(debugMode) System.err.println("rmsdataexchange Module: Error getting new bill payload: " + ex.getMessage());
             ex.printStackTrace();
 		} finally {
             Context.closeSession();
@@ -136,13 +136,13 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 		HttpsURLConnection connection = null;
 		try {
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: using bill payload: " + payload);
+				System.out.println("rmsdataexchange Module: using bill payload: " + payload);
 			
 			// Create URL
 			String baseURL = AdviceUtils.getRMSEndpointURL();
 			String completeURL = baseURL + "/login";
 			if (debugMode)
-				System.out.println("RMS Sync Cashier Module: Auth URL: " + completeURL);
+				System.out.println("rmsdataexchange Module: Auth URL: " + completeURL);
 			URL url = new URL(completeURL);
 			String rmsUser = AdviceUtils.getRMSAuthUserName();
 			String rmsPassword = AdviceUtils.getRMSAuthPassword();
@@ -178,7 +178,7 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 				
 				String returnResponse = response.toString();
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Got Auth Response as: " + returnResponse);
+					System.out.println("rmsdataexchange Module: Got Auth Response as: " + returnResponse);
 				
 				// Extract the token and token expiry date
 				ObjectMapper mapper = new ObjectMapper();
@@ -198,7 +198,7 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 				}
 				catch (Exception e) {
 					if (debugMode)
-						System.err.println("RMS Sync Cashier Module: Error getting auth token: " + e.getMessage());
+						System.err.println("rmsdataexchange Module: Error getting auth token: " + e.getMessage());
 					e.printStackTrace();
 				}
 				
@@ -207,11 +207,11 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 						// We send the payload to RMS
 						if (debugMode)
 							System.err
-							        .println("RMS Sync Cashier Module: We got the Auth token. Now sending the new bill details. Token: "
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill details. Token: "
 							                + token);
 						String finalUrl = baseURL + "/create-bill";
 						if (debugMode)
-							System.out.println("RMS Sync Cashier Module: Final Create Bill URL: " + finalUrl);
+							System.out.println("rmsdataexchange Module: Final Create Bill URL: " + finalUrl);
 						URL finUrl = new URL(finalUrl);
 						
 						connection = (HttpsURLConnection) finUrl.openConnection();
@@ -242,7 +242,7 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 							
 							String finalReturnResponse = finalResponse.toString();
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Got New Bill Response as: "
+								System.out.println("rmsdataexchange Module: Got New Bill Response as: "
 								        + finalReturnResponse);
 							
 							ObjectMapper finalMapper = new ObjectMapper();
@@ -260,12 +260,12 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 								}
 								
 								if (debugMode)
-									System.err.println("RMS Sync Cashier Module: Got New Bill final response: success: "
+									System.err.println("rmsdataexchange Module: Got New Bill final response: success: "
 									        + success + " message: " + message);
 							}
 							catch (Exception e) {
 								if (debugMode)
-									System.err.println("RMS Sync Cashier Module: Error getting New Bill final response: "
+									System.err.println("rmsdataexchange Module: Error getting New Bill final response: "
 									        + e.getMessage());
 								e.printStackTrace();
 							}
@@ -276,26 +276,26 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 							
 						} else {
 							if (debugMode)
-								System.err.println("RMS Sync Cashier Module: Failed to send New Bill final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send New Bill final payload: "
 								        + finalResponseCode);
 						}
 					}
 					catch (Exception em) {
 						if (debugMode)
-							System.err.println("RMS Sync Cashier Module: Error. Failed to send the New Bill final payload: "
+							System.err.println("rmsdataexchange Module: Error. Failed to send the New Bill final payload: "
 							        + em.getMessage());
 						em.printStackTrace();
 					}
 				}
 			} else {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: Failed to get auth: " + responseCode);
+					System.err.println("rmsdataexchange Module: Failed to get auth: " + responseCode);
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: Error. Failed to get auth token: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		
@@ -321,7 +321,7 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 			
 			try {
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Start sending Bill to RMS");
+					System.out.println("rmsdataexchange Module: Start sending Bill to RMS");
 				
 				// If the patient doesnt exist, send the patient to RMS
 				if (debugMode)
@@ -334,11 +334,11 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 				sendRMSNewBill(bill);
 				
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: Finished sending Bill to RMS");
+					System.out.println("rmsdataexchange Module: Finished sending Bill to RMS");
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: Error. Failed to send Bill to RMS: " + ex.getMessage());
+					System.err.println("rmsdataexchange Module: Error. Failed to send Bill to RMS: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}

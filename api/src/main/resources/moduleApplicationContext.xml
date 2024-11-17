@@ -23,7 +23,11 @@
   		    http://www.springframework.org/schema/util
   		    http://www.springframework.org/schema/util/spring-util-3.0.xsd">
 
-    <context:component-scan base-package="org.openmrs.module.rmsdataexchange" />
+    <!-- <context:component-scan base-package="org.openmrs.module.rmsdataexchange"/> -->
+
+    <!-- <bean id="rmsdataexchange.BeanInterceptorConfig" class="org.openmrs.module.rmsdataexchange.advice.BeanInterceptorConfig" /> -->
+
+    <!-- <bean id="rmsdataexchange.RMSMetadata" class="org.openmrs.module.rmsdataexchange.metadata.RMSMetadata" /> -->
 
     <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
     which set audit info like dateCreated, changedBy, etc.-->
@@ -56,49 +60,4 @@
         </property>
     </bean>
 
-    <!-- Define the billSavePaymentAspect bean -->
-    <bean id="billSavePaymentAspect" class="org.openmrs.module.rmsdataexchange.advice.NewBillPaymentSyncToRMS">
-		<property name="billService" ref="cashierBillService"/>
-	</bean>
-
-    <!-- Create a proxy for BillService -->
-    <bean id="cashierBillService" class="org.springframework.aop.framework.ProxyFactoryBean">
-        <property name="target" ref="rmsdataexchange.CashierBillService"/>
-        <property name="interceptorNames">
-            <list>
-                <value>billSavePaymentAspect</value>
-            </list>
-        </property>
-    </bean>
-
-    <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
-    which set audit info like dateCreated, changedBy, etc.-->
-    <bean id="rmsdataexchange.CashierBillService"
-            class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
-        <property name="transactionManager">
-            <ref bean="transactionManager" />
-        </property>
-        <property name="target">
-            <bean class="org.openmrs.module.rmsdataexchange.api.impl.CashierBillServiceImpl">
-                <property name="dao" ref="rmsdataexchange.RmsdataexchangeDao" />
-            </bean>
-        </property>
-        <property name="preInterceptors">
-            <ref bean="serviceInterceptors" />
-        </property>
-        <property name="transactionAttributeSource">
-            <ref bean="transactionAttributeSource" />
-        </property>
-    </bean>
-
-    <!-- Adds RmsdataexchangeService to OpenMRS context so it can be accessed
-    calling Context.getService(RmsdataexchangeService.class) -->
-    <bean parent="serviceContext">
-        <property name="moduleService">
-            <list>
-                <value>org.openmrs.module.rmsdataexchange.api.CashierBillService</value>
-                <ref bean="rmsdataexchange.CashierBillService" />
-            </list>
-        </property>
-    </bean>
 </beans>
