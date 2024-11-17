@@ -106,13 +106,6 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 				    "49af6cdc-7968-4abb-bf46-de10d7f4859f");
 				String natID = "";
 				if (nationalIDIdentifierType != null) {
-					// PatientIdentifier piNatId = patient.getPatientIdentifier(nationalIDIdentifierType);
-					
-					// if (piNatId != null) {
-					// 	natID = piNatId.getIdentifier();
-					// 	if (debugMode)
-					// 		System.err.println("rmsdataexchange Module: Got the national id as: " + natID);
-					// }
 					natID = getPatientIdentifier(patient, nationalIDIdentifierType);
 				}
 				payloadPrep.put("id_number", natID);
