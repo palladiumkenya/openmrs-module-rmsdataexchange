@@ -26,6 +26,7 @@
 		<require_module version="${cashierVersion}">
 			org.openmrs.module.kenyaemr.cashier
 		</require_module>
+		<require_module version="${fhir2Version}">org.openmrs.module.fhir2</require_module>
 	</require_modules>
 
 	<aware_of_modules>
@@ -33,6 +34,7 @@
 		<aware_of_module>org.openmrs.module.webservices.rest</aware_of_module>
 		<aware_of_module>org.openmrs.module.stockmanagement</aware_of_module>
 		<aware_of_module>org.openmrs.module.kenyaemr.cashier</aware_of_module>
+		<aware_of_module>org.openmrs.module.fhir2</aware_of_module>
 	</aware_of_modules>
 	
 	<advice>
@@ -40,11 +42,17 @@
 		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToRMS</class>
 	</advice>
 
+	<advice>
+		<point>org.openmrs.api.VisitService</point>
+		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth</class>
+	</advice>
+
 	<!-- <advice>
 		<point>org.openmrs.module.kenyaemr.cashier.api.IBillService</point>
 		<class>org.openmrs.module.rmsdataexchange.advice.NewBillCreationSyncToRMS</class>
 	</advice> -->
 
+	<!-- PDSL RMS -->
 	<globalProperty>
 		<property>${project.parent.artifactId}.rms.integration.enabled</property>
 		<description>Is RMS integration enabled - (true) = enabled, (false) = disabled</description>
@@ -65,12 +73,37 @@
 		<description>RMS integration Password</description>
 		<defaultValue>password</defaultValue>
 	</globalProperty>
+
+	<!-- Logging -->
 	<globalProperty>
 		<property>${project.parent.artifactId}.rms.integration.logging</property>
 		<description>Is RMS integration logging enabled - (true) = enabled, (false) = disabled</description>
 		<defaultValue>false</defaultValue>
 	</globalProperty>
+
+	<!-- wonder health -->
 	<globalProperty>
+		<property>${project.parent.artifactId}.wonderhealth.integration.enabled</property>
+		<description>Is wonder health integration enabled - (true) = enabled, (false) = disabled</description>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>${project.parent.artifactId}.wonderhealth.integration.endpoint.url</property>
+		<description>wonder health integration Endpoint URL</description>
+		<defaultValue>https://siaya.tsconect.com/api</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>${project.parent.artifactId}.wonderhealth.integration.username</property>
+		<description>wonder health integration Username</description>
+		<defaultValue>pdsl@gmail.com</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>${project.parent.artifactId}.wonderhealth.integration.password</property>
+		<description>wonder health integration Password</description>
+		<defaultValue>password</defaultValue>
+	</globalProperty>
+
+	<!-- <globalProperty>
 		<property>kenyaemr.cashier.chore.syncpatientstorms.done</property>
 		<description>In the RMS integration are all patients synced? - (true) = finished, (false) = not finished</description>
 		<defaultValue>false</defaultValue>
@@ -79,7 +112,7 @@
 		<property>kenyaemr.cashier.chore.syncbillstorms.done</property>
 		<description>In the RMS integration are all patients synced? - (true) = finished, (false) = not finished</description>
 		<defaultValue>false</defaultValue>
-	</globalProperty>
+	</globalProperty> -->
 
 	<!-- Internationalization -->
 	<!-- All message codes should start with @MODULE_ID@.* -->

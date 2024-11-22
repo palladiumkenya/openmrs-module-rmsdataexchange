@@ -18,6 +18,7 @@
             <artifactId>rmsdataexchange-api</artifactId>
             <version>1.2.2-SNAPSHOT</version>
         </dependency>
+
 		<dependency>
 			<groupId>org.openmrs.web</groupId>
 			<artifactId>openmrs-web</artifactId>
@@ -49,6 +50,16 @@
 			<artifactId>metadatadeploy-omod</artifactId>
 			<version>${metadatadeployVersion}</version>
 		</dependency> -->
+
+		<dependency>
+            <groupId>org.openmrs.module</groupId>
+            <artifactId>fhir2-api</artifactId>
+        </dependency>
+
+		<dependency>
+            <groupId>org.openmrs.module</groupId>
+            <artifactId>fhir2-omod</artifactId>
+        </dependency>
 
 	</dependencies>
 
