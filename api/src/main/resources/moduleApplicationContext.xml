@@ -27,6 +27,12 @@
     
     <context:component-scan base-package="org.openmrs.module.rmsdataexchange"/>
 
+    <bean id="patientTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.PatientTranslatorImpl" />
+    
+    <bean id="NewPatientRegistrationSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth" >
+        <property name="patientTranslator" ref="patientTranslatorImpl"/>
+    </bean>
+
     <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
     which set audit info like dateCreated, changedBy, etc.-->
     <bean id="rmsdataexchange.RmsdataexchangeService"
@@ -37,7 +43,7 @@
         <property name="target">
             <bean class="org.openmrs.module.rmsdataexchange.api.impl.RmsdataexchangeServiceImpl">
                 <property name="dao" ref="rmsdataexchange.RmsdataexchangeDao" />
-                <!-- <property name="patientTranslator" ref="patientTranslatorImpl"/> -->
+                <property name="patientTranslator" ref="patientTranslatorImpl"/>
             </bean>
         </property>
         <property name="preInterceptors">

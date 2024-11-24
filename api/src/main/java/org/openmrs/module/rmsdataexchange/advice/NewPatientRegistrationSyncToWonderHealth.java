@@ -21,6 +21,7 @@ import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.PersonName;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
 import org.openmrs.module.kenyaemr.cashier.util.Utils;
 import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
@@ -65,11 +66,22 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	
 	private PatientTranslator patientTranslator;
 	
+	public PatientTranslator getPatientTranslator() {
+		return patientTranslator;
+	}
+	
+	public void setPatientTranslator(PatientTranslator patientTranslator) {
+		this.patientTranslator = patientTranslator;
+	}
+	
 	@Override
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
 		try {
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (AdviceUtils.isWonderHealthIntegrationEnabled()) {
+				// Check if we have fhir translator
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: Checking for FHIR translator: " + patientTranslator);
 				// Check if the method is "saveVisit"
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Wonder Health: Method: " + method.getName());
@@ -83,8 +95,10 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 					
 					Visit visit = (Visit) args[0];
 					
-					// check visit info
-					if (visit != null) {
+					// check visit info and only process new visits
+					if (visit != null && visit.getStopDatetime() == null) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Visit End Date: " + visit.getStopDatetime());
 						Patient patient = visit.getPatient();
 						
 						if (patient != null) {
@@ -100,8 +114,9 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 								if (debugMode)
 									System.out.println("rmsdataexchange Module: Patient Age: " + patient.getAge());
 								
+								String payload = preparePatientPayload(patient);
 								// Use a thread to send the data. This frees up the frontend to proceed
-								syncPatientRunnable runner = new syncPatientRunnable(patient);
+								syncPatientRunnable runner = new syncPatientRunnable(payload);
 								Thread thread = new Thread(runner);
 								thread.start();
 							} else {
@@ -117,8 +132,7 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 						
 					} else {
 						if (debugMode)
-							System.out
-							        .println("rmsdataexchange Module: Wonder Health: Error: Attempted to sync a null visit.");
+							System.out.println("rmsdataexchange Module: Wonder Health: Error: Not a new visit.");
 					}
 				}
 			}
@@ -144,20 +158,39 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 			Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
 			if (patient != null) {
 				org.hl7.fhir.r4.model.Patient patientResource = new org.hl7.fhir.r4.model.Patient();
+				RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
 				
-				try {
-					patientTranslator = Context.getRegisteredComponent("patientTranslatorImpl", PatientTranslator.class);
-				}
-				catch (Exception ex) {
+				if (patientTranslator == null) {
 					if (debugMode)
-						System.out.println("rmsdataexchange Module: Completely failed loading the FHIR patientTranslator: " + ex.getMessage());
-					ex.printStackTrace();
+						System.out.println("rmsdataexchange Module: Patient translator is null we call it manually");
+					try {
+						patientTranslator = Context.getRegisteredComponent("patientTranslatorImpl", PatientTranslator.class);
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Got the Patient translator");
+					}
+					catch (Exception ex) {
+						if (debugMode)
+							System.out
+							        .println("rmsdataexchange Module: Completely failed loading the FHIR patientTranslator: "
+							                + ex.getMessage());
+						ex.printStackTrace();
+					}
 				}
 				
 				if (patientTranslator != null) {
 					if (debugMode)
 						System.out.println("rmsdataexchange Module: Using patient translator to get the payload");
-					patientResource = patientTranslator.toFhirResource(patient);
+					try {
+						patientResource = patientTranslator.toFhirResource(patient);
+					}
+					catch (Exception ex) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Patient translator error: " + ex.getMessage());
+						ex.printStackTrace();
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Using the service to convert to FHIR");
+						patientResource = rmsdataexchangeService.convertPatientToFhirResource(patient);
+					}
 				} else {
 					if (debugMode)
 						System.out.println("rmsdataexchange Module: Manually constructing the payload");
@@ -259,9 +292,9 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	 * @param patient
 	 * @return
 	 */
-	private Boolean sendWonderHealthPatientRegistration(@NotNull Patient patient) {
+	private Boolean sendWonderHealthPatientRegistration(@NotNull String patient) {
 		Boolean ret = false;
-		String payload = preparePatientPayload(patient);
+		String payload = patient;
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		
 		HttpsURLConnection con = null;
@@ -478,11 +511,11 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	 */
 	private class syncPatientRunnable implements Runnable {
 		
-		Patient patient = new Patient();
+		String patient = "";
 		
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		
-		public syncPatientRunnable(@NotNull Patient patient) {
+		public syncPatientRunnable(@NotNull String patient) {
 			this.patient = patient;
 		}
 		

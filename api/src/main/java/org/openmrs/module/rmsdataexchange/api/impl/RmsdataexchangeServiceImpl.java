@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.rmsdataexchange.api.impl;
 
+import org.openmrs.Patient;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
 import org.openmrs.api.UserService;
@@ -49,6 +50,10 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	 */
 	public void setUserService(UserService userService) {
 		this.userService = userService;
+	}
+	
+	public org.hl7.fhir.r4.model.Patient convertPatientToFhirResource(Patient patient) {
+		return (patientTranslator.toFhirResource(patient));
 	}
 	
 	@Override

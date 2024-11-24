@@ -25,6 +25,7 @@ public class BeanInterceptorConfig implements BeanPostProcessor {
 	
 	@Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		// System.out.println("rmsdataexchange Module: Registering Bean : " + beanName + " of class: " + bean.getClass().getName());
 		// We only register for one bean instance and make sure it is a transaction proxy NB: the name "cashierBillService" can change in future so it is not safe to rely on it
 		// if (bean instanceof IBillService && processedBean == false && bean instanceof TransactionalProxy) {
 		//  if (bean instanceof IBillService && processedBean == false && beanName.equalsIgnoreCase("cashierBillService")) {
