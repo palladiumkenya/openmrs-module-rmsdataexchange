@@ -79,9 +79,6 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 		try {
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (AdviceUtils.isWonderHealthIntegrationEnabled()) {
-				// Check if we have fhir translator
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Checking for FHIR translator: " + patientTranslator);
 				// Check if the method is "saveVisit"
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Wonder Health: Method: " + method.getName());
