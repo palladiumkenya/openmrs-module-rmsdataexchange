@@ -400,7 +400,7 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 							while ((finalOutput = fin.readLine()) != null) {
 								finalResponse.append(finalOutput);
 							}
-							in.close();
+							fin.close();
 							
 							String finalReturnResponse = finalResponse.toString();
 							if (debugMode)
