@@ -158,48 +158,67 @@ public class AdviceUtils {
 	}
 	
 	/**
-	 * Get the status of sync chores
+	 * Checks whether Wonder Health Integration is enabled
 	 * 
-	 * @return true - already synced, false - not synced
+	 * @return true (Enabled) and false (Disabled)
 	 */
-	public static Boolean getRMSSyncStatus() {
+	public static Boolean isWonderHealthIntegrationEnabled() {
 		Boolean ret = false;
 		
-		GlobalProperty rmsPatientSyncStatusGP = Context.getAdministrationService().getGlobalPropertyObject(
-		    RMSModuleConstants.RMS_PATIENT_SYNC_STATUS);
-		GlobalProperty rmsBillSyncStatusGP = Context.getAdministrationService().getGlobalPropertyObject(
-		    RMSModuleConstants.RMS_BILL_SYNC_STATUS);
-		String rmsPatientSyncStatus = rmsPatientSyncStatusGP.getPropertyValue();
-		String rmsBillSyncStatus = rmsBillSyncStatusGP.getPropertyValue();
-		String patientTest = (rmsPatientSyncStatus == null || rmsPatientSyncStatus.trim().isEmpty()) ? ""
-		        : rmsPatientSyncStatus.trim();
-		String billTest = (rmsBillSyncStatus == null || rmsBillSyncStatus.trim().isEmpty()) ? "" : rmsBillSyncStatus.trim();
+		GlobalProperty globalWONDERHEALTHEnabled = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.WONDERHEALTH_SYNC_ENABLED);
+		String isWONDERHEALTHLoggingEnabled = globalWONDERHEALTHEnabled.getPropertyValue();
 		
-		if (patientTest.equalsIgnoreCase("true") && billTest.equalsIgnoreCase("true")) {
-			return (true);
+		if (isWONDERHEALTHLoggingEnabled != null && isWONDERHEALTHLoggingEnabled.trim().equalsIgnoreCase("true")) {
+			ret = true;
 		}
 		
 		return (ret);
 	}
 	
 	/**
+	 * Get the status of sync chores
+	 * 
+	 * @return true - already synced, false - not synced
+	 */
+	// public static Boolean getRMSSyncStatus() {
+	// 	Boolean ret = false;
+	
+	// 	GlobalProperty rmsPatientSyncStatusGP = Context.getAdministrationService().getGlobalPropertyObject(
+	// 	    RMSModuleConstants.RMS_PATIENT_SYNC_STATUS);
+	// 	GlobalProperty rmsBillSyncStatusGP = Context.getAdministrationService().getGlobalPropertyObject(
+	// 	    RMSModuleConstants.RMS_BILL_SYNC_STATUS);
+	// 	String rmsPatientSyncStatus = rmsPatientSyncStatusGP.getPropertyValue();
+	// 	String rmsBillSyncStatus = rmsBillSyncStatusGP.getPropertyValue();
+	// 	String patientTest = (rmsPatientSyncStatus == null || rmsPatientSyncStatus.trim().isEmpty()) ? ""
+	// 	        : rmsPatientSyncStatus.trim();
+	// 	String billTest = (rmsBillSyncStatus == null || rmsBillSyncStatus.trim().isEmpty()) ? "" : rmsBillSyncStatus.trim();
+	
+	// 	if (patientTest.equalsIgnoreCase("true") && billTest.equalsIgnoreCase("true")) {
+	// 		return (true);
+	// 	}
+	
+	// 	return (ret);
+	// }
+	
+	/**
 	 * Mark the sync chores as done
 	 * 
 	 * @return
 	 */
-	public static void setRMSSyncStatus(Boolean status) {
-		
-		GlobalProperty rmsPatientSyncStatusGP = Context.getAdministrationService().getGlobalPropertyObject(
-		    RMSModuleConstants.RMS_PATIENT_SYNC_STATUS);
-		GlobalProperty rmsBillSyncStatusGP = Context.getAdministrationService().getGlobalPropertyObject(
-		    RMSModuleConstants.RMS_BILL_SYNC_STATUS);
-		if (status) {
-			rmsPatientSyncStatusGP.setPropertyValue("true");
-			rmsBillSyncStatusGP.setPropertyValue("true");
-		} else {
-			rmsPatientSyncStatusGP.setPropertyValue("false");
-			rmsBillSyncStatusGP.setPropertyValue("false");
-		}
-	}
+	// public static void setRMSSyncStatus(Boolean status) {
+	
+	// 	GlobalProperty rmsPatientSyncStatusGP = Context.getAdministrationService().getGlobalPropertyObject(
+	// 	    RMSModuleConstants.RMS_PATIENT_SYNC_STATUS);
+	// 	GlobalProperty rmsBillSyncStatusGP = Context.getAdministrationService().getGlobalPropertyObject(
+	// 	    RMSModuleConstants.RMS_BILL_SYNC_STATUS);
+	// 	if (status) {
+	// 		rmsPatientSyncStatusGP.setPropertyValue("true");
+	// 		rmsBillSyncStatusGP.setPropertyValue("true");
+	// 	} else {
+	// 		rmsPatientSyncStatusGP.setPropertyValue("false");
+	// 		rmsBillSyncStatusGP.setPropertyValue("false");
+	// 	}
+	// }
 	
 }

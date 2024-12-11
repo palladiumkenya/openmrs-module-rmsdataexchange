@@ -25,6 +25,7 @@ public class BeanInterceptorConfig implements BeanPostProcessor {
 	
 	@Override
     public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+		// System.out.println("rmsdataexchange Module: Registering Bean : " + beanName + " of class: " + bean.getClass().getName());
 		// We only register for one bean instance and make sure it is a transaction proxy NB: the name "cashierBillService" can change in future so it is not safe to rely on it
 		// if (bean instanceof IBillService && processedBean == false && bean instanceof TransactionalProxy) {
 		//  if (bean instanceof IBillService && processedBean == false && beanName.equalsIgnoreCase("cashierBillService")) {
@@ -83,29 +84,35 @@ public class BeanInterceptorConfig implements BeanPostProcessor {
         }
         return bean;
     }
-	// public static void printAllSuperClassesAndInterfaces(Class<?> clazz) {
-	// 	Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 	
-	// 	if (debugMode)
-	// 		System.out.println("rmsdataexchange Module: Class hierarchy for: " + clazz.getName());
-	
-	// 	// Print all superclasses
-	// 	Class<?> currentClass = clazz;
-	// 	while (currentClass != null) {
-	// 		if (debugMode)
-	// 			System.out.println("rmsdataexchange Module: Superclass: " + currentClass.getName());
-	// 		currentClass = currentClass.getSuperclass();
-	// 	}
-	
-	// 	// Print all interfaces
-	// 	currentClass = clazz;
-	// 	while (currentClass != null) {
-	// 		Class<?>[] interfaces = currentClass.getInterfaces();
-	// 		for (Class<?> iface : interfaces) {
-	// 			if (debugMode)
-	// 				System.out.println("rmsdataexchange Module: Interface: " + iface.getName());
-	// 		}
-	// 		currentClass = currentClass.getSuperclass();
-	// 	}
-	// }
+	/**
+	 * Print beans as they are being registered during startup
+	 * 
+	 * @param clazz
+	 */
+	public static void printAllSuperClassesAndInterfaces(Class<?> clazz) {
+		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		
+		if (debugMode)
+			System.out.println("rmsdataexchange Module: Class hierarchy for: " + clazz.getName());
+		
+		// Print all superclasses
+		Class<?> currentClass = clazz;
+		while (currentClass != null) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Superclass: " + currentClass.getName());
+			currentClass = currentClass.getSuperclass();
+		}
+		
+		// Print all interfaces
+		currentClass = clazz;
+		while (currentClass != null) {
+			Class<?>[] interfaces = currentClass.getInterfaces();
+			for (Class<?> iface : interfaces) {
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: Interface: " + iface.getName());
+			}
+			currentClass = currentClass.getSuperclass();
+		}
+	}
 }

@@ -33,11 +33,15 @@
 			<artifactId>stockmanagement-api</artifactId>
 		</dependency>
 
-		<!-- <dependency>
-			<groupId>org.openmrs.module</groupId>
-			<artifactId>metadatadeploy-api</artifactId>
-			<version>${metadatadeployVersion}</version>
-		</dependency> -->
+		<dependency>
+            <groupId>org.openmrs.module</groupId>
+            <artifactId>fhir2-api</artifactId>
+        </dependency>
+
+		<dependency>
+            <groupId>org.openmrs.module</groupId>
+            <artifactId>fhir2-omod</artifactId>
+        </dependency>
 
     </dependencies>
 </project>

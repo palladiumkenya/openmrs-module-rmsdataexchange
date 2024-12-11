@@ -23,11 +23,15 @@
   		    http://www.springframework.org/schema/util
   		    http://www.springframework.org/schema/util/spring-util-3.0.xsd">
 
-    <!-- <context:component-scan base-package="org.openmrs.module.rmsdataexchange"/> -->
+    <context:annotation-config/>
+    
+    <context:component-scan base-package="org.openmrs.module.rmsdataexchange"/>
 
-    <!-- <bean id="rmsdataexchange.BeanInterceptorConfig" class="org.openmrs.module.rmsdataexchange.advice.BeanInterceptorConfig" /> -->
-
-    <!-- <bean id="rmsdataexchange.RMSMetadata" class="org.openmrs.module.rmsdataexchange.metadata.RMSMetadata" /> -->
+    <bean id="patientTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.PatientTranslatorImpl" />
+    
+    <bean id="NewPatientRegistrationSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth" >
+        <property name="patientTranslator" ref="patientTranslatorImpl"/>
+    </bean>
 
     <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
     which set audit info like dateCreated, changedBy, etc.-->
@@ -39,6 +43,7 @@
         <property name="target">
             <bean class="org.openmrs.module.rmsdataexchange.api.impl.RmsdataexchangeServiceImpl">
                 <property name="dao" ref="rmsdataexchange.RmsdataexchangeDao" />
+                <property name="patientTranslator" ref="patientTranslatorImpl"/>
             </bean>
         </property>
         <property name="preInterceptors">

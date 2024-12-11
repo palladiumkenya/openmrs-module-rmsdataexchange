@@ -16,6 +16,7 @@ import org.openmrs.api.OpenmrsService;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.kenyaemr.cashier.api.util.PrivilegeConstants;
 import org.springframework.transaction.annotation.Transactional;
+import org.openmrs.Patient;
 
 /**
  * The main service of this module, which is exposed for other modules. See
@@ -26,4 +27,7 @@ public interface RmsdataexchangeService extends OpenmrsService {
 	@Transactional(readOnly = true)
 	@Authorized({ PrivilegeConstants.VIEW_BILLS })
 	Set<Payment> getPaymentsByBillId(Integer billId);
+	
+	@Transactional(readOnly = true)
+	org.hl7.fhir.r4.model.Patient convertPatientToFhirResource(Patient patient);
 }

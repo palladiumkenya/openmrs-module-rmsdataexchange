@@ -16,60 +16,120 @@ import javax.validation.constraints.NotNull;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openmrs.Patient;
+import org.openmrs.Visit;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
+import org.openmrs.PersonName;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
 import org.openmrs.module.kenyaemr.cashier.util.Utils;
 import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.aop.AfterReturningAdvice;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import ca.uhn.fhir.context.FhirContext;
+
+import org.openmrs.api.VisitService;
+import org.openmrs.module.fhir2.api.FhirPatientService;
+import org.openmrs.module.fhir2.api.translators.PatientTranslator;
+import org.openmrs.module.fhir2.api.translators.PractitionerTranslator;
+import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.openmrs.PersonName;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.HumanName;
+import java.util.UUID;
+
+import org.openmrs.Patient;
+import org.openmrs.PersonName;
+import org.openmrs.PersonAddress;
+import org.openmrs.PatientIdentifier;
+import org.openmrs.api.context.Context;
+import ca.uhn.fhir.context.FhirContext;
+import org.hl7.fhir.r4.model.HumanName;
+import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.Meta;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Address;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.DateType;
 
 /**
- * Detects when a new patient has been registered and syncs to RMS Financial System
+ * Detects when a new visit has started and syncs patient data to Wonder Health
  */
-public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
+@Component("rmsdataexchange.NewPatientRegistrationSyncToWonderHealth")
+public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningAdvice {
 	
 	private Boolean debugMode = false;
+	
+	private PatientTranslator patientTranslator;
+	
+	public PatientTranslator getPatientTranslator() {
+		return patientTranslator;
+	}
+	
+	public void setPatientTranslator(PatientTranslator patientTranslator) {
+		this.patientTranslator = patientTranslator;
+	}
 	
 	@Override
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
 		try {
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
-			if (AdviceUtils.isRMSIntegrationEnabled()) {
-				// Check if the method is "savePatient"
-				if (method.getName().equals("savePatient") && args.length > 0 && args[0] instanceof Patient) {
-					Patient patient = (Patient) args[0];
+			if (AdviceUtils.isWonderHealthIntegrationEnabled()) {
+				// Check if the method is "saveVisit"
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: Wonder Health: Method: " + method.getName());
+				if (method.getName().equals("saveVisit") && args.length > 0 && args[0] instanceof Visit) {
 					
-					// Log patient info
-					if (patient != null) {
-						Date patientCreationDate = patient.getDateCreated();
+					for (Object object : args) {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: patient was created on: " + patientCreationDate);
+							System.out.println("rmsdataexchange Module: Wonder Health: Object Type: "
+							        + object.getClass().getName());
+					}
+					
+					Visit visit = (Visit) args[0];
+					
+					// check visit info and only process new visits
+					if (visit != null && visit.getStopDatetime() == null) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Visit End Date: " + visit.getStopDatetime());
+						Patient patient = visit.getPatient();
 						
-						if (patientCreationDate != null && AdviceUtils.checkIfCreateModetOrEditMode(patientCreationDate)) {
-							// CREATE MODE
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: New patient registered:");
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: Name: " + patient.getPersonName().getFullName());
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: DOB: " + patient.getBirthdate());
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: Age: " + patient.getAge());
-							
-							// Use a thread to send the data. This frees up the frontend to proceed
-							syncPatientRunnable runner = new syncPatientRunnable(patient);
-							Thread thread = new Thread(runner);
-							thread.start();
+						if (patient != null) {
+							// Check if male or female
+							if (patient.getGender().equalsIgnoreCase("F") || patient.getAge() <= 6) {
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: New patient checked in");
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: Patient Name: "
+									        + patient.getPersonName().getFullName());
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: Patient DOB: " + patient.getBirthdate());
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: Patient Age: " + patient.getAge());
+								
+								String payload = preparePatientPayload(patient);
+								// Use a thread to send the data. This frees up the frontend to proceed
+								syncPatientRunnable runner = new syncPatientRunnable(payload);
+								Thread thread = new Thread(runner);
+								thread.start();
+							} else {
+								if (debugMode)
+									System.out
+									        .println("rmsdataexchange Module: Wonder Health: The patient is not female and not below 7 years old");
+							}
 						} else {
-							// EDIT MODE
 							if (debugMode)
-								System.out.println("rmsdataexchange Module: patient in edit mode. we ignore");
+								System.out
+								        .println("rmsdataexchange Module: Wonder Health: Error: No patient attached to the visit");
 						}
+						
 					} else {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Attempted to save a null patient.");
+							System.out.println("rmsdataexchange Module: Wonder Health: Error: Not a new visit.");
 					}
 				}
 			}
@@ -82,47 +142,133 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 	}
 	
 	/**
-	 * Prepare the JSON payload for patient registration
+	 * Prepare the FHIR R4 JSON payload for patient registration
 	 * 
 	 * @param patient
 	 * @return
 	 */
-	private static String preparePatientRMSPayload(@NotNull Patient patient) {
+	private String preparePatientPayload(@NotNull Patient patient) {
 		String ret = "";
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		try {
 			Context.openSession();
 			Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
 			if (patient != null) {
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: New patient created: "
-					        + patient.getPersonName().getFullName() + ", Age: " + patient.getAge());
-				SimpleObject payloadPrep = new SimpleObject();
-				payloadPrep.put("first_name", patient.getPersonName().getGivenName());
-				payloadPrep.put("middle_name", patient.getPersonName().getMiddleName());
-				payloadPrep.put("patient_unique_id", patient.getUuid());
-				payloadPrep.put("last_name", patient.getPersonName().getFamilyName());
-				PatientIdentifierType nationalIDIdentifierType = Context.getPatientService().getPatientIdentifierTypeByUuid(
-				    "49af6cdc-7968-4abb-bf46-de10d7f4859f");
-				String natID = "";
-				if (nationalIDIdentifierType != null) {
-					natID = getPatientIdentifier(patient, nationalIDIdentifierType);
+				org.hl7.fhir.r4.model.Patient patientResource = new org.hl7.fhir.r4.model.Patient();
+				RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+				
+				if (patientTranslator == null) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Patient translator is null we call it manually");
+					try {
+						patientTranslator = Context.getRegisteredComponent("patientTranslatorImpl", PatientTranslator.class);
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Got the Patient translator");
+					}
+					catch (Exception ex) {
+						if (debugMode)
+							System.out
+							        .println("rmsdataexchange Module: Completely failed loading the FHIR patientTranslator: "
+							                + ex.getMessage());
+						ex.printStackTrace();
+					}
 				}
-				payloadPrep.put("id_number", natID);
-				String phoneNumber = patient.getAttribute("Telephone contact") != null ? patient.getAttribute(
-				    "Telephone contact").getValue() : "";
-				payloadPrep.put("phone", phoneNumber);
-				payloadPrep.put("hospital_code", Utils.getDefaultLocationMflCode(null));
-				SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
-				payloadPrep.put("dob", formatter.format(patient.getBirthdate()));
-				payloadPrep.put("gender", patient.getGender() != null ? (patient.getGender().equalsIgnoreCase("M") ? "Male"
-				        : (patient.getGender().equalsIgnoreCase("F") ? "Female" : "")) : "");
-				ret = payloadPrep.toJson();
+				
+				if (patientTranslator != null) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Using patient translator to get the payload");
+					try {
+						patientResource = patientTranslator.toFhirResource(patient);
+					}
+					catch (Exception ex) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Patient translator error: " + ex.getMessage());
+						ex.printStackTrace();
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Using the service to convert to FHIR");
+						patientResource = rmsdataexchangeService.convertPatientToFhirResource(patient);
+					}
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Manually constructing the payload");
+					// Set Patient ID
+					patientResource.setId(patient.getUuid());
+					
+					// Meta info
+					// Generate a random UUID (v4)
+					UUID uuid = UUID.randomUUID();
+					Meta meta = new Meta();
+					meta.setVersionId(uuid.toString());
+					meta.setLastUpdated(new Date());
+					patientResource.setMeta(meta);
+					
+					// Map Name
+					PersonName personName = patient.getPersonName();
+					if (personName != null) {
+						HumanName name = new HumanName();
+						name.setFamily(personName.getFamilyName());
+						name.addGiven(personName.getGivenName());
+						if (personName.getMiddleName() != null) {
+							name.addGiven(personName.getMiddleName());
+						}
+						patientResource.addName(name);
+					}
+					
+					// Map Identifiers
+					for (PatientIdentifier identifier : patient.getActiveIdentifiers()) {
+						Identifier fhirIdentifier = new Identifier();
+						fhirIdentifier.setSystem("http://fhir.openmrs.org/ext/patient/identifier#system");
+						fhirIdentifier.setValue(identifier.getIdentifier());
+						fhirIdentifier.setUse(Identifier.IdentifierUse.OFFICIAL);
+						patientResource.addIdentifier(fhirIdentifier);
+					}
+					
+					// Map Address
+					for (PersonAddress address : patient.getAddresses()) {
+						Address fhirAddress = new Address();
+						fhirAddress.addLine(address.getAddress1());
+						fhirAddress.addLine(address.getAddress2());
+						fhirAddress.setCity(address.getCityVillage());
+						fhirAddress.setState(address.getStateProvince());
+						fhirAddress.setPostalCode(address.getPostalCode());
+						fhirAddress.setCountry(address.getCountry());
+						fhirAddress.setUse(Address.AddressUse.HOME);
+						patientResource.addAddress(fhirAddress);
+					}
+					
+					// Map Gender
+					if ("M".equalsIgnoreCase(patient.getGender())) {
+						patientResource.setGender(AdministrativeGender.MALE);
+					} else if ("F".equalsIgnoreCase(patient.getGender())) {
+						patientResource.setGender(AdministrativeGender.FEMALE);
+					} else {
+						patientResource.setGender(AdministrativeGender.UNKNOWN);
+					}
+					
+					// Map Birthdate
+					patientResource.setBirthDate(patient.getBirthdate());
+					
+					// Map Deceased status
+					patientResource.setDeceased(new BooleanType(patient.getDead()));
+					
+					// Organization
+					// patientResource.setManagingOrganization(null);
+				}
+				
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: Got patient registration details: " + ret);
+					System.out.println("rmsdataexchange Module: Creating FHIR payload for patient: " + patient.getUuid());
+				
+				FhirContext fhirContext = FhirContext.forR4();
+				ret = fhirContext.newJsonParser().setPrettyPrint(true).encodeResourceToString(patientResource);
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: Got FHIR patient registration details: " + ret);
+				// } else {
+				// 	if (debugMode)
+				// 		System.out.println("rmsdataexchange Module: ERROR: failed to load FHIR patient service");
+				// }
 			} else {
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: patient is null");
+					System.out.println("rmsdataexchange Module: ERROR: patient is null");
 			}
 		}
 		catch (Exception ex) {
@@ -143,9 +289,9 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 	 * @param patient
 	 * @return
 	 */
-	public static Boolean sendRMSPatientRegistration(@NotNull Patient patient) {
+	private Boolean sendWonderHealthPatientRegistration(@NotNull String patient) {
 		Boolean ret = false;
-		String payload = preparePatientRMSPayload(patient);
+		String payload = patient;
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		
 		HttpsURLConnection con = null;
@@ -254,7 +400,7 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 							while ((finalOutput = fin.readLine()) != null) {
 								finalResponse.append(finalOutput);
 							}
-							in.close();
+							fin.close();
 							
 							String finalReturnResponse = finalResponse.toString();
 							if (debugMode)
@@ -327,7 +473,7 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 	 * @param patientIdentifierType
 	 * @return
 	 */
-	private static String getPatientIdentifier(Patient patient, PatientIdentifierType patientIdentifierType) {
+	private String getPatientIdentifier(Patient patient, PatientIdentifierType patientIdentifierType) {
 		String ret = "";
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		
@@ -362,11 +508,11 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 	 */
 	private class syncPatientRunnable implements Runnable {
 		
-		Patient patient = new Patient();
+		String patient = "";
 		
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		
-		public syncPatientRunnable(@NotNull Patient patient) {
+		public syncPatientRunnable(@NotNull String patient) {
 			this.patient = patient;
 		}
 		
@@ -378,7 +524,7 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Start sending patient to RMS");
 				
-				sendRMSPatientRegistration(patient);
+				sendWonderHealthPatientRegistration(patient);
 				
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Finished sending patient to RMS");

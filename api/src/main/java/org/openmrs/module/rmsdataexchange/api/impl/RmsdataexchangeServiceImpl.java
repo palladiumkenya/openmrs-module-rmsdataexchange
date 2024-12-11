@@ -9,10 +9,12 @@
  */
 package org.openmrs.module.rmsdataexchange.api.impl;
 
+import org.openmrs.Patient;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
 import org.openmrs.api.UserService;
 import org.openmrs.api.impl.BaseOpenmrsService;
+import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.dao.RmsdataexchangeDao;
@@ -26,6 +28,16 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	
 	UserService userService;
 	
+	private PatientTranslator patientTranslator;
+	
+	public PatientTranslator getPatientTranslator() {
+		return patientTranslator;
+	}
+	
+	public void setPatientTranslator(PatientTranslator patientTranslator) {
+		this.patientTranslator = patientTranslator;
+	}
+	
 	/**
 	 * Injected in moduleApplicationContext.xml
 	 */
@@ -38,6 +50,10 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	 */
 	public void setUserService(UserService userService) {
 		this.userService = userService;
+	}
+	
+	public org.hl7.fhir.r4.model.Patient convertPatientToFhirResource(Patient patient) {
+		return (patientTranslator.toFhirResource(patient));
 	}
 	
 	@Override

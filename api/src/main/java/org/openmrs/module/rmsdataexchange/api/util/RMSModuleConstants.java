@@ -32,9 +32,17 @@ public class RMSModuleConstants {
 	
 	public static final String RMS_LOGGING_ENABLED = "rmsdataexchange.rms.integration.logging";
 	
-	public static final String RMS_PATIENT_SYNC_STATUS = "rmsdataexchange.chore.syncpatientstorms.done";
+	// public static final String RMS_PATIENT_SYNC_STATUS = "rmsdataexchange.chore.syncpatientstorms.done";
 	
-	public static final String RMS_BILL_SYNC_STATUS = "rmsdataexchange.chore.syncbillstorms.done";
+	// public static final String RMS_BILL_SYNC_STATUS = "rmsdataexchange.chore.syncbillstorms.done";
+	
+	public static final String WONDERHEALTH_SYNC_ENABLED = "rmsdataexchange.wonderhealth.integration.enabled";
+	
+	public static final String WONDERHEALTH_ENDPOINT_URL = "rmsdataexchange.wonderhealth.integration.endpoint.url";
+	
+	public static final String WONDERHEALTH_USERNAME = "rmsdataexchange.wonderhealth.integration.username";
+	
+	public static final String WONDERHEALTH_PASSWORD = "rmsdataexchange.wonderhealth.integration.password";
 	
 	protected RMSModuleConstants() {
 	}

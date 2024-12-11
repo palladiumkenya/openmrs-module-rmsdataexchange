@@ -35,6 +35,7 @@
 		<stockManagementVersion>2.0.2-SNAPSHOT</stockManagementVersion>
 		<restWebServicesVersion>2.41.0</restWebServicesVersion>
 		<!-- <metadatadeployVersion>1.12.1</metadatadeployVersion> -->
+		<fhir2Version>2.1.0</fhir2Version>
 	</properties>
 
 	<dependencyManagement>
@@ -82,6 +83,20 @@
 				<artifactId>stockmanagement-omod</artifactId>
 				<version>${stockManagementVersion}</version>
 				<type>jar</type>
+				<scope>provided</scope>
+			</dependency>
+
+			<dependency>
+                <groupId>org.openmrs.module</groupId>
+                <artifactId>fhir2-api</artifactId>
+                <version>${fhir2Version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+			<dependency>
+				<groupId>org.openmrs.module</groupId>
+				<artifactId>fhir2-omod</artifactId>
+				<version>${fhir2Version}</version>
 				<scope>provided</scope>
 			</dependency>
 
