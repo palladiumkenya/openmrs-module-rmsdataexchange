@@ -325,12 +325,12 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 				
 				// If the patient doesnt exist, send the patient to RMS
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module Bill: Send the patient first");
+					System.out.println("RMS Sync RMSDataExchange Module Bill: Send the patient first");
 				NewPatientRegistrationSyncToRMS.sendRMSPatientRegistration(bill.getPatient());
 				
 				// Now we can send the bill
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module Bill: Now Send the bill");
+					System.out.println("RMS Sync RMSDataExchange Module Bill: Now Send the bill");
 				sendRMSNewBill(bill);
 				
 				if (debugMode)
