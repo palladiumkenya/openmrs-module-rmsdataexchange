@@ -9,6 +9,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Set;
+import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.validation.constraints.NotNull;
@@ -19,6 +20,7 @@ import org.openmrs.Patient;
 import org.openmrs.Visit;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
+import org.openmrs.Person;
 import org.openmrs.PersonName;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
@@ -55,6 +57,12 @@ import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.DateType;
+import org.hl7.fhir.r4.model.Bundle;
+import org.openmrs.module.fhir2.FhirConstants;
+import org.openmrs.Relationship;
+import org.openmrs.RelationshipType;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.Reference;
 
 /**
  * Detects when a new visit has started and syncs patient data to Wonder Health
@@ -63,6 +71,8 @@ import org.hl7.fhir.r4.model.DateType;
 public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningAdvice {
 	
 	private Boolean debugMode = false;
+	
+	private static final Integer MAX_CHILD_AGE = 5;
 	
 	private PatientTranslator patientTranslator;
 	
@@ -150,10 +160,19 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	private String preparePatientPayload(@NotNull Patient patient) {
 		String ret = "";
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		
 		try {
 			Context.openSession();
 			Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIPS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIP_TYPES);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PERSONS);
 			if (patient != null) {
+				// Create a new FHIR bundle
+				Bundle bundle = new Bundle();
+				bundle.setType(Bundle.BundleType.COLLECTION);
+				
 				org.hl7.fhir.r4.model.Patient patientResource = new org.hl7.fhir.r4.model.Patient();
 				RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
 				
@@ -255,11 +274,78 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 					// patientResource.setManagingOrganization(null);
 				}
 				
+				// Add primary patient to bundle
+				bundle.addEntry().setFullUrl(FhirConstants.PATIENT + "/" + patientResource.getIdElement().getIdPart())
+				        .setResource(patientResource);
+				
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Creating FHIR payload for patient: " + patient.getUuid());
 				
+				//Get any relationships (children under 2yrs age)
+				List<Relationship> relationships = Context.getPersonService().getRelationshipsByPerson(patient);
+				
+				/*+----------------------+--------------------------------------+------------+--------------+
+				| relationship_type_id | uuid                                 | a_is_to_b  | b_is_to_a    |
+				+----------------------+--------------------------------------+------------+--------------+
+				|                    1 | 8d919b58-c2cc-11de-8d13-0010c6dffd0f | Doctor     | Patient      |
+				|                    2 | 8d91a01c-c2cc-11de-8d13-0010c6dffd0f | Sibling    | Sibling      |
+				|                    3 | 8d91a210-c2cc-11de-8d13-0010c6dffd0f | Parent     | Child        |
+				|                    4 | 8d91a3dc-c2cc-11de-8d13-0010c6dffd0f | Aunt/Uncle | Niece/Nephew |
+				|                    5 | 5f115f62-68b7-11e3-94ee-6bef9086de92 | Guardian   | Dependant    |
+				|                    6 | d6895098-5d8d-11e3-94ee-b35a4132a5e3 | Spouse     | Spouse       |
+				|                    7 | 007b765f-6725-4ae9-afee-9966302bace4 | Partner    | Partner      |
+				|                    8 | 2ac0d501-eadc-4624-b982-563c70035d46 | Co-wife    | Co-wife      |
+				+----------------------+--------------------------------------+------------+--------------+
+				*/
+				
+				// Add related child patients to the bundle
+				for (Relationship relationship : relationships) {
+					if (relationship.getRelationshipType().getUuid()
+					        .equalsIgnoreCase("8d91a210-c2cc-11de-8d13-0010c6dffd0f")) {
+						Person relatedPerson = relationship.getPersonB(); // Child
+						
+						if (relatedPerson != null && relatedPerson.getAge() <= MAX_CHILD_AGE) {
+							Patient relatedOpenmrsPatient = Context.getPatientService().getPatientByUuid(
+							    relatedPerson.getUuid());
+							if (relatedOpenmrsPatient != null) {
+								org.hl7.fhir.r4.model.Patient fhirRelatedPatient = patientTranslator
+								        .toFhirResource(relatedOpenmrsPatient);
+								if (fhirRelatedPatient != null) {
+									bundle.addEntry()
+									        .setFullUrl(
+									            FhirConstants.PATIENT + "/" + fhirRelatedPatient.getIdElement().getIdPart())
+									        .setResource(fhirRelatedPatient);
+									
+									// Add an extension to the primary patient for the relationship
+									Extension relationshipExtension = new Extension();
+									relationshipExtension
+									        .setUrl("http://hl7.org/fhir/StructureDefinition/patient-relationship");
+									
+									// Add relationship type (e.g., sibling, parent)
+									RelationshipType relationshipType = relationship.getRelationshipType();
+									if (relationshipType != null) {
+										relationshipExtension.addExtension(new Extension("type",
+										        new org.hl7.fhir.r4.model.CodeableConcept().setText("Child")));
+									}
+									
+									// Add reference to the related patient
+									Reference relatedPatientReference = new Reference();
+									relatedPatientReference.setReference(FhirConstants.PATIENT + "/"
+									        + fhirRelatedPatient.getIdElement().getIdPart());
+									relatedPatientReference.setDisplay(relatedOpenmrsPatient.getPersonName().getFullName());
+									relationshipExtension.addExtension(new Extension("relatedPatient",
+									        relatedPatientReference));
+									
+									// Add the extension to the primary patient
+									patientResource.addExtension(relationshipExtension);
+								}
+							}
+						}
+					}
+				}
+				
 				FhirContext fhirContext = FhirContext.forR4();
-				ret = fhirContext.newJsonParser().setPrettyPrint(true).encodeResourceToString(patientResource);
+				ret = fhirContext.newJsonParser().setPrettyPrint(true).encodeResourceToString(bundle);
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Got FHIR patient registration details: " + ret);
 				// } else {
