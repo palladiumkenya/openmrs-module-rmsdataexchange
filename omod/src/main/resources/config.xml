@@ -114,6 +114,17 @@
 		<defaultValue>false</defaultValue>
 	</globalProperty> -->
 
+	<globalProperty>
+		<property>${project.parent.artifactId}.wonderhealth.integration.auth.url</property>
+		<description>wonder health integration auth url</description>
+		<defaultValue>pdsl@gmail.com</defaultValue>
+	</globalProperty>
+	<globalProperty>
+		<property>${project.parent.artifactId}.wonderhealth.integration.auth.token</property>
+		<description>wonder health integration auth token</description>
+		<defaultValue></defaultValue>
+	</globalProperty>
+
 	<!-- Internationalization -->
 	<!-- All message codes should start with @MODULE_ID@.* -->
 	<messages>

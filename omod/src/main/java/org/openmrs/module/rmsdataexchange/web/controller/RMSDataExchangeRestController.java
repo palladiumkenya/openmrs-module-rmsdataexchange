@@ -16,6 +16,7 @@ import org.openmrs.annotation.Authorized;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
 import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -51,26 +52,38 @@ public class RMSDataExchangeRestController extends BaseRestController {
 		
 		if (AdviceUtils.isRMSIntegrationEnabled()) {
 			try {
-				System.out.println("New NUPI: Received STK push details: " + request.getQueryString());
+				String requestBody = "";
+				BufferedReader requestReader = request.getReader();
+				
+				for (String output = ""; (output = requestReader.readLine()) != null; requestBody = requestBody
+						+ output) {}
+				System.out.println("RMS Sync RMSDataExchange Module: Received STK push details: " + requestBody);
 				
 				// Login first
-				HttpsURLConnection con = null;
+				// HttpsURLConnection con = null;
+				HttpURLConnection con = null;
 				HttpsURLConnection connection = null;
 				
 				// Create URL
 				String baseURL = AdviceUtils.getRMSEndpointURL();
 				String completeURL = baseURL + "/login";
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: STK push Auth URL: " + completeURL);
+					System.out.println("RMS Sync RMSDataExchange Module: STK push Auth URL: " + completeURL);
 				URL url = new URL(completeURL);
 				String rmsUser = AdviceUtils.getRMSAuthUserName();
 				String rmsPassword = AdviceUtils.getRMSAuthPassword();
 				SimpleObject authPayloadCreator = SimpleObject.create("email", rmsUser != null ? rmsUser : "", "password",
 				    rmsPassword != null ? rmsPassword : "");
 				String authPayload = authPayloadCreator.toJson();
+				if (debugMode)
+					System.out.println("RMS Sync RMSDataExchange Module: STK push Auth Payload: " + authPayload);
 				
 				// Get token
-				con = (HttpsURLConnection) url.openConnection();
+				if (url.getProtocol().equalsIgnoreCase("https")) {
+					con = (HttpsURLConnection) url.openConnection();
+				} else if (url.getProtocol().equalsIgnoreCase("http")) {
+					con = (HttpURLConnection) url.openConnection();
+				}
 				con.setRequestMethod("POST");
 				con.setDoOutput(true);
 				con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
@@ -97,7 +110,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 					
 					String returnResponse = response.toString();
 					if (debugMode)
-						System.out.println("RMS Sync Cashier Module: Got STK push Auth Response as: " + returnResponse);
+						System.out.println("RMS Sync RMSDataExchange Module: Got STK push Auth Response as: " + returnResponse);
 					
 					// Extract the token and token expiry date
 					ObjectMapper mapper = new ObjectMapper();
@@ -117,7 +130,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 					}
 					catch (Exception e) {
 						if (debugMode)
-							System.err.println("RMS Sync Cashier Module: Error getting STK push auth token: "
+							System.err.println("RMS Sync RMSDataExchange Module: Error getting STK push auth token: "
 							        + e.getMessage());
 						e.printStackTrace();
 					}
@@ -128,11 +141,11 @@ public class RMSDataExchangeRestController extends BaseRestController {
 							// We send the payload to RMS
 							if (debugMode)
 								System.err
-								        .println("RMS Sync Cashier Module: We got the Auth token. Now sending the STK push details. Token: "
+								        .println("RMS Sync RMSDataExchange Module: We got the Auth token. Now sending the STK push details. Token: "
 								                + token);
 							String finalUrl = baseURL + "/stk-push";
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Final STK push URL: " + finalUrl);
+								System.out.println("RMS Sync RMSDataExchange Module: Final STK push URL: " + finalUrl);
 							URL finUrl = new URL(finalUrl);
 							
 							connection = (HttpsURLConnection) finUrl.openConnection();
@@ -144,13 +157,8 @@ public class RMSDataExchangeRestController extends BaseRestController {
 							connection.setConnectTimeout(10000);
 							
 							// Repost the request
-							String requestBody = "";
-							BufferedReader requestReader = request.getReader();
-							
-							for (String output = ""; (output = requestReader.readLine()) != null; requestBody = requestBody
-							        + output) {}
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Sending STK push to remote: " + requestBody);
+								System.out.println("RMS Sync RMSDataExchange Module: Sending STK push to remote: " + requestBody);
 							
 							PrintStream pos = new PrintStream(connection.getOutputStream());
 							pos.print(requestBody);
@@ -172,7 +180,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 								
 								String finalReturnResponse = finalResponse.toString();
 								if (debugMode)
-									System.out.println("RMS Sync Cashier Module: Got STK push Response as: "
+									System.out.println("RMS Sync RMSDataExchange Module: Got STK push Response as: "
 									        + finalReturnResponse);
 								
 								// forward the responce
@@ -182,7 +190,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 								
 							} else {
 								if (debugMode)
-									System.err.println("RMS Sync Cashier Module: Failed to forward STK push final payload: "
+									System.err.println("RMS Sync RMSDataExchange Module: Failed to forward STK push final payload: "
 									        + finalResponseCode);
 								
 								InputStream errorStream = connection.getErrorStream();
@@ -202,7 +210,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 								String errorBody = errorResponse.toString();
 								if (debugMode)
 									System.err
-									        .println("RMS Sync Cashier Module: STK Push Error response body: " + errorBody);
+									        .println("RMS Sync RMSDataExchange Module: STK Push Error response body: " + errorBody);
 								
 								HttpHeaders headers = new HttpHeaders();
 								String contentType = con.getHeaderField("Content-Type");
@@ -218,25 +226,29 @@ public class RMSDataExchangeRestController extends BaseRestController {
 						catch (Exception em) {
 							if (debugMode)
 								System.err
-								        .println("RMS Sync Cashier Module: Error. Failed to forward STK push final payload: "
+								        .println("RMS Sync RMSDataExchange Module: Error. Failed to forward STK push final payload: "
 								                + em.getMessage());
 							em.printStackTrace();
 						}
 					}
 				} else {
 					if (debugMode)
-						System.err.println("RMS Sync Cashier Module: STK Push Failed to get auth: " + responseCode);
+						System.err.println("RMS Sync RMSDataExchange Module: STK Push Failed to get auth: " + responseCode);
+					try {
+						HttpStatus status = HttpStatus.resolve(responseCode);
+						return new ResponseEntity<>(ret, status);
+					} catch(Exception ec) {}
 				}
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: STK Push Error: " + ex.getMessage());
+					System.err.println("RMS Sync RMSDataExchange Module: STK Push Error: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 			
 		} else {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: STK Push Failed: RMS integration is disabled");
+				System.err.println("RMS Sync RMSDataExchange Module: STK Push Failed: RMS integration is disabled");
 		}
 		
 		return ResponseEntity.badRequest().contentType(MediaType.APPLICATION_JSON).body(ret);
@@ -274,7 +286,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 				String baseURL = AdviceUtils.getRMSEndpointURL();
 				String completeURL = baseURL + "/login";
 				if (debugMode)
-					System.out.println("RMS Sync Cashier Module: STK check Auth URL: " + completeURL);
+					System.out.println("RMS Sync RMSDataExchange Module: STK check Auth URL: " + completeURL);
 				URL url = new URL(completeURL);
 				String rmsUser = AdviceUtils.getRMSAuthUserName();
 				String rmsPassword = AdviceUtils.getRMSAuthPassword();
@@ -310,7 +322,8 @@ public class RMSDataExchangeRestController extends BaseRestController {
 					
 					String returnResponse = response.toString();
 					if (debugMode)
-						System.out.println("RMS Sync Cashier Module: Got STK check Auth Response as: " + returnResponse);
+						System.out.println("RMS Sync RMSDataExchange Module: Got STK check Auth Response as: "
+						        + returnResponse);
 					
 					// Extract the token and token expiry date
 					ObjectMapper mapper = new ObjectMapper();
@@ -330,7 +343,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 					}
 					catch (Exception e) {
 						if (debugMode)
-							System.err.println("RMS Sync Cashier Module: Error getting STK check auth token: "
+							System.err.println("RMS Sync RMSDataExchange Module: Error getting STK check auth token: "
 							        + e.getMessage());
 						e.printStackTrace();
 					}
@@ -341,11 +354,11 @@ public class RMSDataExchangeRestController extends BaseRestController {
 							// We send the payload to RMS
 							if (debugMode)
 								System.err
-								        .println("RMS Sync Cashier Module: We got the Auth token. Now sending the STK check details. Token: "
+								        .println("RMS Sync RMSDataExchange Module: We got the Auth token. Now sending the STK check details. Token: "
 								                + token);
 							String finalUrl = baseURL + "/stk-push-query";
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Final STK check URL: " + finalUrl);
+								System.out.println("RMS Sync RMSDataExchange Module: Final STK check URL: " + finalUrl);
 							URL finUrl = new URL(finalUrl);
 							
 							connection = (HttpsURLConnection) finUrl.openConnection();
@@ -363,7 +376,8 @@ public class RMSDataExchangeRestController extends BaseRestController {
 							for (String output = ""; (output = requestReader.readLine()) != null; requestBody = requestBody
 							        + output) {}
 							if (debugMode)
-								System.out.println("RMS Sync Cashier Module: Sending STK check to remote: " + requestBody);
+								System.out.println("RMS Sync RMSDataExchange Module: Sending STK check to remote: "
+								        + requestBody);
 							
 							PrintStream pos = new PrintStream(connection.getOutputStream());
 							pos.print(requestBody);
@@ -385,7 +399,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 								
 								String finalReturnResponse = finalResponse.toString();
 								if (debugMode)
-									System.out.println("RMS Sync Cashier Module: Got STK check Response as: "
+									System.out.println("RMS Sync RMSDataExchange Module: Got STK check Response as: "
 									        + finalReturnResponse);
 								
 								// forward the responce
@@ -396,7 +410,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 							} else {
 								if (debugMode)
 									System.err
-									        .println("RMS Sync Cashier Module: Failed to forward STK check final payload: "
+									        .println("RMS Sync RMSDataExchange Module: Failed to forward STK check final payload: "
 									                + finalResponseCode);
 								
 								InputStream errorStream = connection.getErrorStream();
@@ -415,7 +429,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 								// Handle or log the error response
 								String errorBody = errorResponse.toString();
 								if (debugMode)
-									System.err.println("RMS Sync Cashier Module: STK check Error response body: "
+									System.err.println("RMS Sync RMSDataExchange Module: STK check Error response body: "
 									        + errorBody);
 								
 								HttpHeaders headers = new HttpHeaders();
@@ -432,25 +446,25 @@ public class RMSDataExchangeRestController extends BaseRestController {
 						catch (Exception em) {
 							if (debugMode)
 								System.err
-								        .println("RMS Sync Cashier Module: Error. Failed to forward STK check final payload: "
+								        .println("RMS Sync RMSDataExchange Module: Error. Failed to forward STK check final payload: "
 								                + em.getMessage());
 							em.printStackTrace();
 						}
 					}
 				} else {
 					if (debugMode)
-						System.err.println("RMS Sync Cashier Module: STK check Failed to get auth: " + responseCode);
+						System.err.println("RMS Sync RMSDataExchange Module: STK check Failed to get auth: " + responseCode);
 				}
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("RMS Sync Cashier Module: STK check Error: " + ex.getMessage());
+					System.err.println("RMS Sync RMSDataExchange Module: STK check Error: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 			
 		} else {
 			if (debugMode)
-				System.err.println("RMS Sync Cashier Module: STK check Failed: RMS integration is disabled");
+				System.err.println("RMS Sync RMSDataExchange Module: STK check Failed: RMS integration is disabled");
 		}
 		
 		return ResponseEntity.badRequest().contentType(MediaType.APPLICATION_JSON).body(ret);

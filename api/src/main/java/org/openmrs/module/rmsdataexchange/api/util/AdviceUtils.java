@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.openmrs.GlobalProperty;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
@@ -119,6 +120,62 @@ public class AdviceUtils {
 		String baseURL = globalPostUrl.getPropertyValue();
 		if (baseURL == null || baseURL.trim().isEmpty()) {
 			baseURL = "https://siaya.tsconect.com/api";
+		}
+		ret = baseURL;
+		
+		return (ret);
+	}
+	
+	/**
+	 * Gets the Wonder Health auth URL
+	 * 
+	 * @return
+	 */
+	public static String getWonderHealthAuthURL() {
+		String ret = "";
+		
+		GlobalProperty globalPostUrl = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.WONDER_HEALTH_AUTH_URL);
+		String baseURL = globalPostUrl.getPropertyValue();
+		if (baseURL == null || baseURL.trim().isEmpty()) {
+			baseURL = " https://kenyafhirtest.iwonderpro.com/FHIRAPI/create/login";
+		}
+		ret = baseURL;
+		
+		return (ret);
+	}
+	
+	/**
+	 * Gets the Wonder Health auth Token
+	 * 
+	 * @return
+	 */
+	public static String getWonderHealthAuthToken() {
+		String ret = "";
+		
+		GlobalProperty globalPostUrl = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.WONDER_HEALTH_AUTH_TOKEN);
+		String token = globalPostUrl.getPropertyValue();
+		if (!StringUtils.isEmpty(token)) {
+			ret = token;
+		}
+		
+		return (ret);
+	}
+	
+	/**
+	 * Gets the wonder health endpoint URL
+	 * 
+	 * @return
+	 */
+	public static String getWonderHealthEndpointURL() {
+		String ret = "";
+		
+		GlobalProperty globalPostUrl = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.WONDERHEALTH_ENDPOINT_URL);
+		String baseURL = globalPostUrl.getPropertyValue();
+		if (baseURL == null || baseURL.trim().isEmpty()) {
+			baseURL = "https://kenyafhirtest.iwonderpro.com/FHIRAPI/create";
 		}
 		ret = baseURL;
 		

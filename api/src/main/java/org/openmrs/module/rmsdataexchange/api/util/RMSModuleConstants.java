@@ -26,6 +26,10 @@ public class RMSModuleConstants {
 	
 	public static final String RMS_ENDPOINT_URL = "rmsdataexchange.rms.integration.endpoint.url";
 	
+	public static final String WONDER_HEALTH_AUTH_URL = "rmsdataexchange.wonderhealth.integration.auth.url";
+	
+	public static final String WONDER_HEALTH_AUTH_TOKEN = "rmsdataexchange.wonderhealth.integration.auth.token";
+	
 	public static final String RMS_USERNAME = "rmsdataexchange.rms.integration.username";
 	
 	public static final String RMS_PASSWORD = "rmsdataexchange.rms.integration.password";
