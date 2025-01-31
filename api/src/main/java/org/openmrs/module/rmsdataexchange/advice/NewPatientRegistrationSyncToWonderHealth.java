@@ -14,6 +14,7 @@ import java.util.List;
 import javax.net.ssl.HttpsURLConnection;
 import javax.validation.constraints.NotNull;
 
+import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openmrs.Patient;
@@ -370,7 +371,7 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	}
 	
 	/**
-	 * Send the patient registration payload to RMS
+	 * Send the patient registration payload to Wonder Health
 	 * 
 	 * @param patient
 	 * @return
@@ -384,168 +385,106 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 		HttpsURLConnection connection = null;
 		try {
 			if (debugMode)
-				System.out.println("rmsdataexchange Module: using payload: " + payload);
+				System.out.println("rmsdataexchange Module: Wonder Health using payload: " + payload);
 			
-			// Create URL
-			String baseURL = AdviceUtils.getRMSEndpointURL();
-			String completeURL = baseURL + "/login";
-			if (debugMode)
-				System.out.println("rmsdataexchange Module: Auth URL: " + completeURL);
-			URL url = new URL(completeURL);
-			String rmsUser = AdviceUtils.getRMSAuthUserName();
-			String rmsPassword = AdviceUtils.getRMSAuthPassword();
-			SimpleObject authPayloadCreator = SimpleObject.create("email", rmsUser != null ? rmsUser : "", "password",
-			    rmsPassword != null ? rmsPassword : "");
-			String authPayload = authPayloadCreator.toJson();
+			// Get Auth
+			String authToken = AdviceUtils.getWonderHealthAuthToken();
 			
-			// Get token
-			con = (HttpsURLConnection) url.openConnection();
-			con.setRequestMethod("POST");
-			con.setDoOutput(true);
-			con.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-			con.setRequestProperty("Accept", "application/json");
-			con.setConnectTimeout(10000); // set timeout to 10 seconds
-			
-			PrintStream os = new PrintStream(con.getOutputStream());
-			os.print(authPayload);
-			os.close();
-			
-			int responseCode = con.getResponseCode();
-			
-			if (responseCode == HttpURLConnection.HTTP_OK) { //success
-				BufferedReader in = null;
-				in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-				
-				String input;
-				StringBuffer response = new StringBuffer();
-				
-				while ((input = in.readLine()) != null) {
-					response.append(input);
-				}
-				in.close();
-				
-				String returnResponse = response.toString();
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Got Auth Response as: " + returnResponse);
-				
-				// Extract the token and token expiry date
-				ObjectMapper mapper = new ObjectMapper();
-				JsonNode jsonNode = null;
-				String token = "";
-				String expires_at = "";
-				SimpleObject authObj = new SimpleObject();
-				
+			if (!StringUtils.isEmpty(authToken) && !authToken.isEmpty()) {
 				try {
-					jsonNode = mapper.readTree(returnResponse);
-					if (jsonNode != null) {
-						token = jsonNode.get("token") == null ? "" : jsonNode.get("token").getTextValue();
-						authObj.put("token", token);
-						expires_at = jsonNode.get("expires_at") == null ? "" : jsonNode.get("expires_at").getTextValue();
-						authObj.put("expires_at", expires_at);
-					}
-				}
-				catch (Exception e) {
+					// We send the payload to Wonder Health
 					if (debugMode)
-						System.err.println("rmsdataexchange Module: Error getting auth token: " + e.getMessage());
-					e.printStackTrace();
-				}
-				
-				if (!token.isEmpty()) {
-					try {
-						// We send the payload to RMS
-						if (debugMode)
-							System.err
-							        .println("rmsdataexchange Module: We got the Auth token. Now sending the patient registration details. Token: "
-							                + token);
-						String finalUrl = baseURL + "/create-patient-profile";
-						if (debugMode)
-							System.out.println("rmsdataexchange Module: Final patient registration URL: " + finalUrl);
-						URL finUrl = new URL(finalUrl);
+						System.err
+						        .println("rmsdataexchange Module: Wonder Health We got the Auth token. Now sending the patient registration details. Token: "
+						                + authToken);
+					String wonderHealthUrl = AdviceUtils.getWonderHealthEndpointURL();
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Wonder health patient registration URL: "
+						        + wonderHealthUrl);
+					URL finWonderHealthUrl = new URL(wonderHealthUrl);
+					
+					connection = (HttpsURLConnection) finWonderHealthUrl.openConnection();
+					connection.setRequestMethod("POST");
+					connection.setDoOutput(true);
+					connection.setRequestProperty("access-token", authToken);
+					connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+					connection.setRequestProperty("Accept", "application/json");
+					connection.setConnectTimeout(10000);
+					
+					PrintStream pos = new PrintStream(connection.getOutputStream());
+					pos.print(payload);
+					pos.close();
+					
+					int finalResponseCode = connection.getResponseCode();
+					
+					if (finalResponseCode == HttpURLConnection.HTTP_OK) { //success
+						BufferedReader fin = null;
+						fin = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 						
-						connection = (HttpsURLConnection) finUrl.openConnection();
-						connection.setRequestMethod("POST");
-						connection.setDoOutput(true);
-						connection.setRequestProperty("Authorization", "Bearer " + token);
-						connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
-						connection.setRequestProperty("Accept", "application/json");
-						connection.setConnectTimeout(10000);
+						String finalOutput;
+						StringBuffer finalResponse = new StringBuffer();
 						
-						PrintStream pos = new PrintStream(connection.getOutputStream());
-						pos.print(payload);
-						pos.close();
-						
-						int finalResponseCode = connection.getResponseCode();
-						
-						if (finalResponseCode == HttpURLConnection.HTTP_OK) { //success
-							BufferedReader fin = null;
-							fin = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-							
-							String finalOutput;
-							StringBuffer finalResponse = new StringBuffer();
-							
-							while ((finalOutput = fin.readLine()) != null) {
-								finalResponse.append(finalOutput);
-							}
-							fin.close();
-							
-							String finalReturnResponse = finalResponse.toString();
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: Got patient registration Response as: "
-								        + finalReturnResponse);
-							
-							ObjectMapper finalMapper = new ObjectMapper();
-							JsonNode finaljsonNode = null;
-							Boolean success = false;
-							String message = "";
-							
-							try {
-								finaljsonNode = finalMapper.readTree(finalReturnResponse);
-								if (finaljsonNode != null) {
-									success = finaljsonNode.get("success") == null ? false : finaljsonNode.get("success")
-									        .getBooleanValue();
-									message = finaljsonNode.get("message") == null ? "" : finaljsonNode.get("message")
-									        .getTextValue();
-								}
-								
-								if (debugMode)
-									System.err
-									        .println("rmsdataexchange Module: Got patient registration final response: success: "
-									                + success + " message: " + message);
-							}
-							catch (Exception e) {
-								if (debugMode)
-									System.err
-									        .println("rmsdataexchange Module: Error getting patient registration final response: "
-									                + e.getMessage());
-								e.printStackTrace();
-							}
-							
-							if (success != null && success == true) {
-								ret = true;
-							}
-							
-						} else {
-							if (debugMode)
-								System.err.println("rmsdataexchange Module: Failed to send final payload: "
-								        + finalResponseCode);
+						while ((finalOutput = fin.readLine()) != null) {
+							finalResponse.append(finalOutput);
 						}
-					}
-					catch (Exception em) {
+						fin.close();
+						
+						String finalReturnResponse = finalResponse.toString();
 						if (debugMode)
-							System.err.println("rmsdataexchange Module: Error. Failed to send the final payload: "
-							        + em.getMessage());
-						em.printStackTrace();
+							System.out
+							        .println("rmsdataexchange Module: Wonder Health Got patient registration Response as: "
+							                + finalReturnResponse);
+						
+						ObjectMapper finalMapper = new ObjectMapper();
+						JsonNode finaljsonNode = null;
+						Boolean success = false;
+						String message = "";
+						
+						try {
+							finaljsonNode = finalMapper.readTree(finalReturnResponse);
+							if (finaljsonNode != null) {
+								success = finaljsonNode.get("success") == null ? false : finaljsonNode.get("success")
+								        .getBooleanValue();
+								message = finaljsonNode.get("message") == null ? "" : finaljsonNode.get("message")
+								        .getTextValue();
+							}
+							
+							if (debugMode)
+								System.err
+								        .println("rmsdataexchange Module: Wonder Health  Got patient registration final response: success: "
+								                + success + " message: " + message);
+						}
+						catch (Exception e) {
+							if (debugMode)
+								System.err
+								        .println("rmsdataexchange Module: Wonder Health Error getting patient registration final response: "
+								                + e.getMessage());
+							e.printStackTrace();
+						}
+						
+						if (success != null && success == true) {
+							ret = true;
+						}
+						
+					} else {
+						if (debugMode)
+							System.err.println("rmsdataexchange Module: Wonder Health Failed to send final payload: "
+							        + finalResponseCode);
 					}
 				}
-			} else {
-				if (debugMode)
-					System.err.println("rmsdataexchange Module: Failed to get auth: " + responseCode);
+				catch (Exception em) {
+					if (debugMode)
+						System.err.println("rmsdataexchange Module: Wonder Health Error. Failed to send the final payload: "
+						        + em.getMessage());
+					em.printStackTrace();
+				}
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Wonder Health Error. Failed to get auth token: "
+				        + ex.getMessage());
 			ex.printStackTrace();
 		}
 		
