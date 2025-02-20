@@ -6,12 +6,48 @@ import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Set;
 import java.util.List;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.StringWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
@@ -39,13 +75,16 @@ import org.openmrs.api.VisitService;
 import org.openmrs.module.fhir2.api.FhirPatientService;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.fhir2.api.translators.PractitionerTranslator;
+import org.openmrs.module.fhir2.api.translators.LocationTranslator;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.openmrs.module.kenyaemr.cashier.util.Utils;
 import org.openmrs.PersonName;
 import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.HumanName;
 import java.util.UUID;
 
 import org.openmrs.Patient;
+import org.openmrs.Location;
 import org.openmrs.PersonName;
 import org.openmrs.PersonAddress;
 import org.openmrs.PatientIdentifier;
@@ -77,12 +116,22 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	
 	private PatientTranslator patientTranslator;
 	
+	private LocationTranslator locationTranslator;
+	
 	public PatientTranslator getPatientTranslator() {
 		return patientTranslator;
 	}
 	
 	public void setPatientTranslator(PatientTranslator patientTranslator) {
 		this.patientTranslator = patientTranslator;
+	}
+	
+	public LocationTranslator getLocationTranslator() {
+		return locationTranslator;
+	}
+	
+	public void setLocationTranslator(LocationTranslator locationTranslator) {
+		this.locationTranslator = locationTranslator;
 	}
 	
 	@Override
@@ -282,6 +331,57 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Creating FHIR payload for patient: " + patient.getUuid());
 				
+				// Add location to bundle
+				if (locationTranslator == null) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Location translator is null we call it manually");
+					try {
+						locationTranslator = Context.getRegisteredComponent("locationTranslatorImpl",
+						    LocationTranslator.class);
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Got the Location translator");
+					}
+					catch (Exception ex) {
+						if (debugMode)
+							System.out
+							        .println("rmsdataexchange Module: Completely failed loading the FHIR locationTranslator: "
+							                + ex.getMessage());
+						ex.printStackTrace();
+					}
+				}
+				
+				Location location = Utils.getDefaultLocation();
+				if (locationTranslator != null) {
+					if (debugMode)
+						System.out
+						        .println("rmsdataexchange Module: Got the location translator Adding location to wonder health bundle");
+					if (location != null) {
+						org.hl7.fhir.r4.model.Location fhirLocation = locationTranslator.toFhirResource(location);
+						if (fhirLocation != null) {
+							String locmfl = Utils.getDefaultLocationMflCode(location);
+							Identifier locationFHIRmfl = new Identifier();
+							locationFHIRmfl.setSystem("https://kmhfl.health.go.ke/fhir/CodeSystem/mfl");
+							locationFHIRmfl.setValue(locmfl);
+							fhirLocation.addIdentifier(locationFHIRmfl);
+							bundle.addEntry()
+							        .setFullUrl(FhirConstants.LOCATION + "/" + fhirLocation.getIdElement().getIdPart())
+							        .setResource(fhirLocation);
+						}
+					}
+				} else {
+					if (debugMode)
+						System.out
+						        .println("rmsdataexchange Module: Failed to get the location translator. We create location resource manualy. Adding location to wonder health bundle");
+					org.hl7.fhir.r4.model.Location fhirLocation = new org.hl7.fhir.r4.model.Location();
+					String locmfl = Utils.getDefaultLocationMflCode(location);
+					Identifier locationFHIRmfl = new Identifier();
+					locationFHIRmfl.setSystem("https://kmhfl.health.go.ke/fhir/CodeSystem/mfl");
+					locationFHIRmfl.setValue(locmfl);
+					fhirLocation.addIdentifier(locationFHIRmfl);
+					bundle.addEntry().setFullUrl(FhirConstants.LOCATION + "/" + fhirLocation.getIdElement().getIdPart())
+					        .setResource(fhirLocation);
+				}
+				
 				//Get any relationships (children under 2yrs age)
 				List<Relationship> relationships = Context.getPersonService().getRelationshipsByPerson(patient);
 				
@@ -381,8 +481,8 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 		String payload = patient;
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		
-		HttpsURLConnection con = null;
-		HttpsURLConnection connection = null;
+		// HttpsURLConnection con = null;
+		HttpURLConnection connection = null;
 		try {
 			if (debugMode)
 				System.out.println("rmsdataexchange Module: Wonder Health using payload: " + payload);
@@ -390,7 +490,7 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 			// Get Auth
 			String authToken = AdviceUtils.getWonderHealthAuthToken();
 			
-			if (!StringUtils.isEmpty(authToken) && !authToken.isEmpty()) {
+			if (authToken != null && !StringUtils.isEmpty(authToken) && !authToken.isEmpty()) {
 				try {
 					// We send the payload to Wonder Health
 					if (debugMode)
@@ -403,7 +503,15 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 						        + wonderHealthUrl);
 					URL finWonderHealthUrl = new URL(wonderHealthUrl);
 					
-					connection = (HttpsURLConnection) finWonderHealthUrl.openConnection();
+					// Debug TODO: remove in production
+					trustAllCerts();
+					
+					if (finWonderHealthUrl.getProtocol().equalsIgnoreCase("https")) {
+						connection = (HttpsURLConnection) finWonderHealthUrl.openConnection();
+					} else if (finWonderHealthUrl.getProtocol().equalsIgnoreCase("http")) {
+						connection = (HttpURLConnection) finWonderHealthUrl.openConnection();
+					}
+					
 					connection.setRequestMethod("POST");
 					connection.setDoOutput(true);
 					connection.setRequestProperty("access-token", authToken);
@@ -478,6 +586,10 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 						        + em.getMessage());
 					em.printStackTrace();
 				}
+			} else {
+				if (debugMode)
+					System.err
+					        .println("rmsdataexchange Module: Wonder Health Error. Failed to send the final payload: Empty auth token");
 			}
 			
 		}
@@ -560,6 +672,54 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 				ex.printStackTrace();
 			}
 		}
+	}
+	
+	/**
+	 * Trust all certs
+	 */
+	public static void trustAllCerts() {
+		TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+			
+			public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+				return null;
+			}
+			
+			@Override
+			public void checkClientTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
+			}
+			
+			@Override
+			public void checkServerTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
+			}
+		} };
+		
+		SSLContext sc = null;
+		try {
+			sc = SSLContext.getInstance("SSL");
+		}
+		catch (NoSuchAlgorithmException e) {
+			System.out.println(e.getMessage());
+		}
+		try {
+			sc.init(null, trustAllCerts, new java.security.SecureRandom());
+		}
+		catch (KeyManagementException e) {
+			System.out.println(e.getMessage());
+		}
+		HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+		
+		// Optional 
+		// Create all-trusting host name verifier
+		HostnameVerifier validHosts = new HostnameVerifier() {
+			
+			@Override
+			public boolean verify(String arg0, SSLSession arg1) {
+				return true;
+			}
+		};
+		// All hosts will be valid
+		HttpsURLConnection.setDefaultHostnameVerifier(validHosts);
+		
 	}
 	
 }
