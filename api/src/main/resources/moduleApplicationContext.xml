@@ -28,9 +28,12 @@
     <context:component-scan base-package="org.openmrs.module.rmsdataexchange"/>
 
     <bean id="patientTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.PatientTranslatorImpl" />
+
+    <bean id="locationTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.LocationTranslatorImpl" />
     
     <bean id="NewPatientRegistrationSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth" >
         <property name="patientTranslator" ref="patientTranslatorImpl"/>
+        <property name="locationTranslator" ref="locationTranslatorImpl"/>
     </bean>
 
     <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
