@@ -9,6 +9,7 @@ import java.net.URL;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.validation.constraints.NotNull;
@@ -16,6 +17,7 @@ import javax.validation.constraints.NotNull;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.openmrs.api.context.Context;
+import org.openmrs.Concept;
 import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.BillLineItem;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
@@ -89,10 +91,10 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 					SimpleObject itemsPayload = new SimpleObject();
 					if(billLineItem.getBillableService() != null) {
 						itemsPayload.put("service_code", "3f500af5-3139-45b0-ab47-57f9c504f92d");
-						itemsPayload.put("service_name", "service");
+						itemsPayload.put("service_name", getBillItemCategory(billLineItem));
 					} else if(billLineItem.getItem() != null) {
 						itemsPayload.put("service_code", "a3dd3be8-05c5-425e-8e08-6765f6a50b76");
-						itemsPayload.put("service_name", "stock_item");
+						itemsPayload.put("service_name", getBillItemCategory(billLineItem));
 					} else {
 						itemsPayload.put("service_code", "");
 						itemsPayload.put("service_name", ""); 
@@ -119,6 +121,20 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
         }
 
 		return (ret);
+	}
+	
+	/**
+	 * Gets the bill item category
+	 * 
+	 * @param billLineItem
+	 * @return
+	 */
+	private static String getBillItemCategory(BillLineItem billLineItem) {
+		Concept itemCategory = billLineItem.getBillableService().getServiceCategory();
+		if (itemCategory == null) {
+			return "";
+		}
+		return itemCategory.getFullySpecifiedName(Locale.ENGLISH).getName();
 	}
 	
 	/**
