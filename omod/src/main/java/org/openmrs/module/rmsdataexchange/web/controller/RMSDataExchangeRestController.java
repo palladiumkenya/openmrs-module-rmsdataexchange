@@ -221,7 +221,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 									headers.setContentType(MediaType.TEXT_PLAIN);
 								}
 								
-								return ResponseEntity.status(responseCode).headers(headers).body(errorBody);
+								return ResponseEntity.status(finalResponseCode).headers(headers).body(errorBody);
 							}
 						}
 						catch (Exception em) {
@@ -441,7 +441,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 									headers.setContentType(MediaType.TEXT_PLAIN);
 								}
 								
-								return ResponseEntity.status(responseCode).headers(headers).body(errorBody);
+								return ResponseEntity.status(finalResponseCode).headers(headers).body(errorBody);
 							}
 						}
 						catch (Exception em) {
@@ -653,7 +653,7 @@ public class RMSDataExchangeRestController extends BaseRestController {
 									headers.setContentType(MediaType.TEXT_PLAIN);
 								}
 								
-								return ResponseEntity.status(responseCode).headers(headers).body(errorBody);
+								return ResponseEntity.status(finalResponseCode).headers(headers).body(errorBody);
 							}
 						}
 						catch (Exception em) {
