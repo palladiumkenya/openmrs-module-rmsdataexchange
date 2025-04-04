@@ -36,16 +36,58 @@
         <property name="locationTranslator" ref="locationTranslatorImpl"/>
     </bean>
 
-    <!-- Wraps RmsdataexchangeService methods in DB transactions and OpenMRS interceptors,
-    which set audit info like dateCreated, changedBy, etc.-->
-    <bean id="rmsdataexchange.RmsdataexchangeService"
-            class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+    <bean id="rmsdataexchange.RmsdataexchangeConfig" class="org.openmrs.module.rmsdataexchange.RmsdataexchangeConfig" />
+
+    <bean id="rmsdataexchange.BeanInterceptorConfig" class="org.openmrs.module.rmsdataexchange.advice.BeanInterceptorConfig" />
+
+    <!-- <bean id="rmsdataexchange.NewPatientRegistrationSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth" /> -->
+
+    <bean id="rmsdataexchange.RMSDataExchangeRestController" class="org.openmrs.module.rmsdataexchange.web.controller.RMSDataExchangeRestController" />
+
+    <bean id="rmsdataexchange.RMSMetadata" class="org.openmrs.module.rmsdataexchange.metadata.RMSMetadata" />
+
+    <!-- Services accessible via Context.getService() -->
+
+	<!-- RmsdataexchangeService -->
+	<!-- <bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService</value>
+				<bean
+						class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+					<property name="transactionManager">
+						<ref bean="transactionManager" />
+					</property>
+					<property name="target">
+						<bean class="org.openmrs.module.rmsdataexchange.api.impl.RmsdataexchangeServiceImpl">
+							<property name="dao">
+								<bean class="org.openmrs.module.rmsdataexchange.api.dao.RmsdataexchangeDaoImpl">
+									<property name="sessionFactory">
+										<ref bean="sessionFactory" />
+									</property>
+								</bean>
+							</property>
+                            <property name="patientTranslator" ref="patientTranslatorImpl"/>
+						</bean>
+					</property>
+					<property name="preInterceptors">
+						<ref bean="serviceInterceptors" />
+					</property>
+					<property name="transactionAttributeSource">
+						<ref bean="transactionAttributeSource" />
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean> -->
+
+	<bean id="rmsdataexchange.RmsdataexchangeService" class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
         <property name="transactionManager">
             <ref bean="transactionManager" />
         </property>
         <property name="target">
             <bean class="org.openmrs.module.rmsdataexchange.api.impl.RmsdataexchangeServiceImpl">
-                <property name="dao" ref="rmsdataexchange.RmsdataexchangeDao" />
+                <property name="dao" ref="rmsdataexchange.RmsdataexchangeDao"/>				
                 <property name="patientTranslator" ref="patientTranslatorImpl"/>
             </bean>
         </property>
@@ -57,9 +99,13 @@
         </property>
     </bean>
 
-    <!-- Adds RmsdataexchangeService to OpenMRS context so it can be accessed
-    calling Context.getService(RmsdataexchangeService.class) -->
-    <bean parent="serviceContext">
+	<bean id="rmsdataexchange.RmsdataexchangeDao" class="org.openmrs.module.rmsdataexchange.api.dao.RmsdataexchangeDaoImpl" >
+		<property name="sessionFactory">
+			<ref bean="sessionFactory" />
+		</property>
+	</bean>
+
+	<bean parent="serviceContext">
         <property name="moduleService">
             <list>
                 <value>org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService</value>
@@ -67,5 +113,57 @@
             </list>
         </property>
     </bean>
+
+	<!-- RMSBillAttributeService -->
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.rmsdataexchange.api.RMSBillAttributeService</value>
+				<bean
+						class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+					<property name="transactionManager">
+						<ref bean="transactionManager" />
+					</property>
+					<property name="target">
+						<bean class="org.openmrs.module.rmsdataexchange.api.impl.RMSBillAttributeServiceImpl">
+							<property name="dao" ref="rmsdataexchange.RmsdataexchangeDao"/>
+						</bean>
+					</property>
+					<property name="preInterceptors">
+						<ref bean="serviceInterceptors" />
+					</property>
+					<property name="transactionAttributeSource">
+						<ref bean="transactionAttributeSource" />
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean>
+
+	<!-- RMSPaymentAttributeService -->
+	<bean parent="serviceContext">
+		<property name="moduleService">
+			<list>
+				<value>org.openmrs.module.rmsdataexchange.api.RMSPaymentAttributeService</value>
+				<bean
+						class="org.springframework.transaction.interceptor.TransactionProxyFactoryBean">
+					<property name="transactionManager">
+						<ref bean="transactionManager" />
+					</property>
+					<property name="target">
+						<bean class="org.openmrs.module.rmsdataexchange.api.impl.RMSPaymentAttributeServiceImpl">
+							<property name="dao" ref="rmsdataexchange.RmsdataexchangeDao"/>
+						</bean>
+					</property>
+					<property name="preInterceptors">
+						<ref bean="serviceInterceptors" />
+					</property>
+					<property name="transactionAttributeSource">
+						<ref bean="transactionAttributeSource" />
+					</property>
+				</bean>
+			</list>
+		</property>
+	</bean>
 
 </beans>

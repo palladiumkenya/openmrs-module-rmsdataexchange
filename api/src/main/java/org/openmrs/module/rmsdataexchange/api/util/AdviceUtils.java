@@ -1,13 +1,41 @@
 package org.openmrs.module.rmsdataexchange.api.util;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.Hibernate;
 import org.openmrs.GlobalProperty;
+import org.openmrs.Patient;
+import org.openmrs.PatientIdentifier;
+import org.openmrs.Person;
+import org.openmrs.PersonAttribute;
+import org.openmrs.PersonAttributeType;
+import org.openmrs.User;
+import org.openmrs.Visit;
+import org.openmrs.VisitAttribute;
+import org.openmrs.VisitAttributeType;
+import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.Daemon;
+import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
+import org.openmrs.module.rmsdataexchange.api.RMSBillAttributeService;
+import org.openmrs.module.rmsdataexchange.api.RMSPaymentAttributeService;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSBillAttribute;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSBillAttributeType;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSPaymentAttribute;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSPaymentAttributeType;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSQueue;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
+import org.openmrs.util.PrivilegeConstants;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 public class AdviceUtils {
 	
@@ -118,10 +146,11 @@ public class AdviceUtils {
 		GlobalProperty globalPostUrl = Context.getAdministrationService().getGlobalPropertyObject(
 		    RMSModuleConstants.RMS_ENDPOINT_URL);
 		String baseURL = globalPostUrl.getPropertyValue();
+		
 		if (baseURL == null || baseURL.trim().isEmpty()) {
 			baseURL = "https://siaya.tsconect.com/api";
 		}
-		ret = baseURL;
+		ret = baseURL.trim();
 		
 		return (ret);
 	}
@@ -137,10 +166,11 @@ public class AdviceUtils {
 		GlobalProperty globalPostUrl = Context.getAdministrationService().getGlobalPropertyObject(
 		    RMSModuleConstants.WONDER_HEALTH_AUTH_URL);
 		String baseURL = globalPostUrl.getPropertyValue();
+		
 		if (baseURL == null || baseURL.trim().isEmpty()) {
 			baseURL = " https://kenyafhirtest.iwonderpro.com/FHIRAPI/create/login";
 		}
-		ret = baseURL;
+		ret = baseURL.trim();
 		
 		return (ret);
 	}
@@ -156,6 +186,7 @@ public class AdviceUtils {
 		GlobalProperty globalPostUrl = Context.getAdministrationService().getGlobalPropertyObject(
 		    RMSModuleConstants.WONDER_HEALTH_AUTH_TOKEN);
 		String token = globalPostUrl.getPropertyValue();
+		
 		if (!StringUtils.isEmpty(token)) {
 			ret = token;
 		}
@@ -174,10 +205,11 @@ public class AdviceUtils {
 		GlobalProperty globalPostUrl = Context.getAdministrationService().getGlobalPropertyObject(
 		    RMSModuleConstants.WONDERHEALTH_ENDPOINT_URL);
 		String baseURL = globalPostUrl.getPropertyValue();
+		
 		if (baseURL == null || baseURL.trim().isEmpty()) {
 			baseURL = "https://kenyafhirtest.iwonderpro.com/FHIRAPI/create";
 		}
-		ret = baseURL;
+		ret = baseURL.trim();
 		
 		return (ret);
 	}
@@ -193,7 +225,8 @@ public class AdviceUtils {
 		GlobalProperty rmsUserGP = Context.getAdministrationService().getGlobalPropertyObject(
 		    RMSModuleConstants.RMS_USERNAME);
 		String rmsUser = rmsUserGP.getPropertyValue();
-		ret = (rmsUser == null || rmsUser.trim().isEmpty()) ? "" : rmsUser;
+		
+		ret = (rmsUser == null || rmsUser.trim().isEmpty()) ? "" : rmsUser.trim();
 		
 		return (ret);
 	}
@@ -209,7 +242,8 @@ public class AdviceUtils {
 		GlobalProperty rmsPasswordGP = Context.getAdministrationService().getGlobalPropertyObject(
 		    RMSModuleConstants.RMS_PASSWORD);
 		String rmsPassword = rmsPasswordGP.getPropertyValue();
-		ret = (rmsPassword == null || rmsPassword.trim().isEmpty()) ? "" : rmsPassword;
+		
+		ret = (rmsPassword == null || rmsPassword.trim().isEmpty()) ? "" : rmsPassword.trim();
 		
 		return (ret);
 	}
@@ -231,6 +265,404 @@ public class AdviceUtils {
 		}
 		
 		return (ret);
+	}
+	
+	/**
+	 * Gets a random integer between lower and upper
+	 * 
+	 * @param lower
+	 * @param upper
+	 * @return
+	 */
+	public static int getRandomInt(int lower, int upper) {
+		if (lower > upper) {
+			throw new IllegalArgumentException(
+			        "rmsdataexchange Module: getRandomInt Error : Lower limit must be less than or equal to upper limit");
+		}
+		return ThreadLocalRandom.current().nextInt(lower, upper + 1);
+	}
+	
+	/**
+	 * Adds payload to queue for later processing
+	 * 
+	 * @param payload
+	 * @return
+	 */
+	public static Boolean addSyncPayloadToQueue(String payload, RMSQueueSystem rmsQueueSystem) {
+		Boolean ret = false;
+		Boolean debugMode = false;
+		try {
+			if (Context.isSessionOpen()) {
+				System.out.println("rmsdataexchange Module: We have an open session M");
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			} else {
+				System.out.println("rmsdataexchange Module: Error: We have NO open session M");
+				Context.openSession();
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			}
+			debugMode = isRMSLoggingEnabled();
+			// get the system
+			RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+			if (rmsdataexchangeService != null) {
+				if (rmsQueueSystem != null) {
+					RMSQueue rmsQueue = new RMSQueue();
+					rmsQueue.setPayload(payload);
+					rmsQueue.setRmsSystem(rmsQueueSystem);
+					
+					rmsdataexchangeService.saveQueueItem(rmsQueue);
+					return (true);
+				} else {
+					if (debugMode)
+						System.err
+						        .println("rmsdataexchange Module: Error saving payload to the queue: Failed to get the queue system");
+				}
+			} else {
+				if (debugMode)
+					System.err
+					        .println("rmsdataexchange Module: Error saving payload to the queue: Failed to load RMS service");
+			}
+			
+		}
+		catch (Exception ex) {
+			if (debugMode)
+				System.err.println("rmsdataexchange Module: Error saving payload to the queue: " + ex.getMessage());
+			ex.printStackTrace();
+		}
+		finally {
+			// Context.closeSession();
+		}
+		
+		return (ret);
+	}
+	
+	/**
+	 * Print the current date and time
+	 * 
+	 * @return
+	 */
+	public static String printCurrentDateTime() {
+		// Get the current date and time
+		LocalDateTime currentDateTime = LocalDateTime.now();
+		
+		// Format the date and time for better readability
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
+		String formattedDateTime = currentDateTime.format(formatter);
+		
+		return (formattedDateTime);
+	}
+	
+	/**
+	 * Get the value of visit attribute
+	 * 
+	 * @param visit
+	 * @param attributeTypeUuid
+	 * @return
+	 */
+	public static String getVisitAttributeValueByTypeUuid(Visit visit, String attributeTypeUuid) {
+		if (visit == null || attributeTypeUuid == null) {
+			return null;
+		}
+		
+		for (VisitAttribute attribute : visit.getActiveAttributes()) {
+			VisitAttributeType type = attribute.getAttributeType();
+			if (type != null && attributeTypeUuid.equals(type.getUuid())) {
+				return attribute.getValueReference();
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Set visit attribute
+	 * 
+	 * @param visit
+	 * @param attributeTypeUuid
+	 * @param value
+	 */
+	public static void setVisitAttributeValueByTypeUuid(Visit visit, String attributeTypeUuid, Object value) {
+		if (visit == null || attributeTypeUuid == null || value == null) {
+			return;
+		}
+		
+		VisitAttributeType attributeType = Context.getVisitService().getVisitAttributeTypeByUuid(attributeTypeUuid);
+		if (attributeType == null) {
+			throw new IllegalArgumentException("rmsdataexchange Module: No VisitAttributeType found for UUID: "
+			        + attributeTypeUuid);
+		}
+		
+		VisitAttribute existingAttribute = null;
+		
+		for (VisitAttribute attr : visit.getAttributes()) {
+			if (attributeType.equals(attr.getAttributeType())) {
+				existingAttribute = attr;
+				break;
+			}
+		}
+		
+		if (existingAttribute != null) {
+			existingAttribute.setValue(value); // updates existing
+		} else {
+			VisitAttribute newAttribute = new VisitAttribute();
+			newAttribute.setAttributeType(attributeType);
+			newAttribute.setValue(value);
+			visit.addAttribute(newAttribute); // inserts new
+		}
+	}
+	
+	/**
+	 * Get the value of person attribute
+	 * 
+	 * @param person
+	 * @param attributeTypeUuid
+	 * @return
+	 */
+	public static String getPersonAttributeValueByTypeUuid(Person person, String attributeTypeUuid) {
+		if (person == null || attributeTypeUuid == null) {
+			return null;
+		}
+		
+		for (PersonAttribute attribute : person.getActiveAttributes()) {
+			PersonAttributeType type = attribute.getAttributeType();
+			if (type != null && attributeTypeUuid.equals(type.getUuid())) {
+				return attribute.getValue();
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Set Person attribute
+	 * 
+	 * @param Person
+	 * @param attributeTypeUuid
+	 * @param value
+	 */
+	public static void setPersonAttributeValueByTypeUuid(Patient patient, String attributeTypeUuid, String value) {
+		if (patient == null || attributeTypeUuid == null || value == null) {
+			return;
+		}
+		
+		if (Context.isSessionOpen()) {
+			System.out.println("rmsdataexchange Module: We have an open session 2");
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+			Context.addProxyPrivilege(PrivilegeConstants.EDIT_PERSONS);
+			Context.addProxyPrivilege(PrivilegeConstants.ADD_PERSONS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_LOCATIONS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_USERS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENT_IDENTIFIERS);
+		} else {
+			System.out.println("rmsdataexchange Module: Error: We have NO open session 2");
+			Context.openSession();
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+			Context.addProxyPrivilege(PrivilegeConstants.EDIT_PERSONS);
+			Context.addProxyPrivilege(PrivilegeConstants.ADD_PERSONS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_LOCATIONS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_USERS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENT_IDENTIFIERS);
+		}
+		User currentUser = Daemon.getDaemonThreadUser();
+		System.out.println("rmsdataexchange Module: Current user in session 2: "
+		        + (currentUser != null ? currentUser.getUsername() : ""));
+		
+		PatientService patientService = Context.getPatientService();
+		Patient localPatient = patientService.getPatient(patient.getId());
+		
+		PersonAttributeType attributeType = Context.getPersonService().getPersonAttributeTypeByUuid(attributeTypeUuid);
+		if (attributeType == null) {
+			throw new IllegalArgumentException("rmsdataexchange Module: No PersonAttributeType found for UUID: "
+			        + attributeTypeUuid);
+		}
+		
+		PersonAttribute existingAttribute = null;
+		
+		for (PersonAttribute attr : localPatient.getAttributes()) {
+			if (attributeType.equals(attr.getAttributeType())) {
+				existingAttribute = attr;
+				break;
+			}
+		}
+		
+		for (PatientIdentifier identifier : localPatient.getIdentifiers()) {
+			Hibernate.initialize(identifier.getIdentifierType());
+			System.err.println("rmsdataexchange Module: Identifier type: " + identifier.getIdentifierType().getName());
+		}
+		
+		if (existingAttribute != null) {
+			existingAttribute.setValue(value); // updates existing
+			Context.getPatientService().savePatient(localPatient);
+		} else {
+			PersonAttribute newAttribute = new PersonAttribute();
+			newAttribute.setAttributeType(attributeType);
+			newAttribute.setValue(value);
+			newAttribute.setCreator(Context.getUserService().getUser(1));
+			// newAttribute.setCreator(currentUser);
+			newAttribute.setDateCreated(new Date());
+			localPatient.addAttribute(newAttribute); // inserts new attribute
+			Context.getPatientService().savePatient(localPatient);
+		}
+		// Context.closeSession();
+	}
+	
+	/**
+	 * Get the value of bill attribute
+	 * 
+	 * @param bill
+	 * @param attributeTypeUuid
+	 * @return
+	 */
+	public static String getBillAttributeValueByTypeUuid(Bill bill, String attributeTypeUuid) {
+		if (bill == null || attributeTypeUuid == null) {
+			return null;
+		}
+		
+		RMSBillAttributeService rmsBillAttributeService = Context.getService(RMSBillAttributeService.class);
+		List<RMSBillAttribute> billAttributes = rmsBillAttributeService.getAllBillAttributesByBillId(bill.getId(), false);
+		
+		for (RMSBillAttribute attribute : billAttributes) {
+			RMSBillAttributeType type = attribute.getAttributeType();
+			if (type != null && attributeTypeUuid.equals(type.getUuid())) {
+				return attribute.getValue();
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Set Bill attribute
+	 * 
+	 * @param Bill
+	 * @param attributeTypeUuid
+	 * @param value
+	 */
+	public static void setBillAttributeValueByTypeUuid(Bill bill, String attributeTypeUuid, String value) {
+		if (bill == null || attributeTypeUuid == null || value == null) {
+			return;
+		}
+		
+		if (Context.isSessionOpen()) {
+			System.out.println("rmsdataexchange Module: We have an open session N");
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+			Context.addProxyPrivilege(PrivilegeConstants.EDIT_PERSONS);
+			Context.addProxyPrivilege(PrivilegeConstants.ADD_PERSONS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_LOCATIONS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_USERS);
+		} else {
+			System.out.println("rmsdataexchange Module: Error: We have NO open session N");
+			Context.openSession();
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+			Context.addProxyPrivilege(PrivilegeConstants.EDIT_PERSONS);
+			Context.addProxyPrivilege(PrivilegeConstants.ADD_PERSONS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_LOCATIONS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_USERS);
+		}
+		RMSBillAttributeService rmsBillAttributeService = Context.getService(RMSBillAttributeService.class);
+		RMSBillAttributeType attributeType = rmsBillAttributeService.getBillAttributeTypeByUuid(attributeTypeUuid);
+		if (attributeType == null) {
+			throw new IllegalArgumentException("No BillAttributeType found for UUID: " + attributeTypeUuid);
+		}
+		
+		RMSBillAttribute existingAttribute = null;
+		List<RMSBillAttribute> billAttributes = rmsBillAttributeService.getAllBillAttributesByBillId(bill.getId(), false);
+		
+		for (RMSBillAttribute attr : billAttributes) {
+			if (attributeType.equals(attr.getAttributeType())) {
+				existingAttribute = attr;
+				break;
+			}
+		}
+		
+		if (existingAttribute != null) {
+			existingAttribute.setValue(value); // updates existing
+			rmsBillAttributeService.saveBillAttribute(existingAttribute);
+		} else {
+			RMSBillAttribute newAttribute = new RMSBillAttribute();
+			newAttribute.setAttributeType(attributeType);
+			newAttribute.setValue(value);
+			newAttribute.setCreator(Context.getUserService().getUser(1));
+			newAttribute.setDateCreated(new Date());
+			newAttribute.setBill(bill);
+			rmsBillAttributeService.saveBillAttribute(newAttribute);
+		}
+	}
+	
+	/**
+	 * Get the value of payment attribute
+	 * 
+	 * @param payment
+	 * @param attributeTypeUuid
+	 * @return
+	 */
+	public static String getPaymentAttributeValueByTypeUuid(Payment payment, String attributeTypeUuid) {
+		if (payment == null || attributeTypeUuid == null) {
+			return null;
+		}
+		
+		RMSPaymentAttributeService rmsPaymentAttributeService = Context.getService(RMSPaymentAttributeService.class);
+		List<RMSPaymentAttribute> paymentAttributes = rmsPaymentAttributeService.getAllPaymentAttributesByPaymentId(
+		    payment.getId(), false);
+		
+		for (RMSPaymentAttribute attribute : paymentAttributes) {
+			RMSPaymentAttributeType type = attribute.getAttributeType();
+			if (type != null && attributeTypeUuid.equals(type.getUuid())) {
+				return attribute.getValue();
+			}
+		}
+		
+		return null;
+	}
+	
+	/**
+	 * Set payment attribute
+	 * 
+	 * @param Payment
+	 * @param attributeTypeUuid
+	 * @param value
+	 */
+	public static void setPaymentAttributeValueByTypeUuid(Payment payment, String attributeTypeUuid, String value) {
+		if (payment == null || attributeTypeUuid == null || value == null) {
+			return;
+		}
+		
+		RMSPaymentAttributeService rmsPaymentAttributeService = Context.getService(RMSPaymentAttributeService.class);
+		RMSPaymentAttributeType attributeType = rmsPaymentAttributeService.getPaymentAttributeTypeByUuid(attributeTypeUuid);
+		if (attributeType == null) {
+			throw new IllegalArgumentException("No PaymentAttributeType found for UUID: " + attributeTypeUuid);
+		}
+		
+		RMSPaymentAttribute existingAttribute = null;
+		List<RMSPaymentAttribute> billAttributes = rmsPaymentAttributeService.getAllPaymentAttributesByPaymentId(
+		    payment.getId(), false);
+		
+		for (RMSPaymentAttribute attr : billAttributes) {
+			if (attributeType.equals(attr.getAttributeType())) {
+				existingAttribute = attr;
+				break;
+			}
+		}
+		
+		if (existingAttribute != null) {
+			existingAttribute.setValue(value); // updates existing
+			rmsPaymentAttributeService.savePaymentAttribute(existingAttribute);
+		} else {
+			RMSPaymentAttribute newAttribute = new RMSPaymentAttribute();
+			newAttribute.setAttributeType(attributeType);
+			newAttribute.setValue(value);
+			newAttribute.setCreator(Context.getUserService().getUser(1));
+			newAttribute.setDateCreated(new Date());
+			newAttribute.setPayment(payment);
+			rmsPaymentAttributeService.savePaymentAttribute(newAttribute);
+		}
 	}
 	
 	/**

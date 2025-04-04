@@ -1,39 +1,750 @@
 <?xml version="1.0" encoding="UTF-8"?>
  
-<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog/1.9"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
-                  http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
- 
-    <!--
-    	See http://wiki.openmrs.org/display/docs/Module+liquibase+File for 
-    	documentation on this file.
-    
-        See http://www.liquibase.org/manual/home#available_database_refactorings
-        for a list of supported elements and attributes
-    -->
- 
- 	<!-- Uncomment the changeset below if you want to make the Item class persistable, see also Item and RmsdataexchangeDaoTest -->
- 	<!--
-	<changeSet id="rmsdataexchange-2016-08-02-12-21" author="raff">
-		<preConditions onFail="MARK_RAN">
-			<not><tableExists tableName="rmsdataexchange_item"/></not>
-		</preConditions>
-		<comment>
-			Creating the rmsdataexchange_item table
-		</comment>
-		<createTable tableName="rmsdataexchange_item">
-			<column name="rmsdataexchange_item_id" type="int" autoIncrement="true">
-				<constraints primaryKey="true" nullable="false"/>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-2.0.xsd">
+
+    <!--  RMS QUEUE TABLE DESIGN -->
+
+    <!-- Create table to store RMS Queue System -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_table_20250415_100054" author="pwaweru">
+
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_queue_system"/>
+            </not>
+        </preConditions>
+        <comment>
+            Create table to store RMS Queue System
+        </comment>
+        <createTable tableName="rms_queue_system">
+            <column name="id" autoIncrement="true" type="int">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="description" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int"/>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="voided_reason" type="varchar(255)"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+
+    <!-- Create table to store rms queue -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_table_20250415_082554" author="pwaweru">
+
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_queue"/>
+            </not>
+        </preConditions>
+        <comment>
+            Create table to store rms queue
+        </comment>
+        <createTable tableName="rms_queue">
+            <column name="id" autoIncrement="true" type="int">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="rms_system" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retries" type="int" defaultValue="0">
+                <constraints nullable="true"/>
+            </column>
+            <column name="payload" type="varchar(16000)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int"/>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="voided_reason" type="varchar(255)"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="rms_queue" baseColumnNames="rms_system"
+                                 constraintName="rms_queue_system_reference"
+                                 referencedTableName="rms_queue_system"
+                                 referencedColumnNames="id"
+                                 deferrable="false" initiallyDeferred="false"/>
+    </changeSet>
+
+    <!-- create rms_bill_attribute_type table -->
+    <changeSet id="kenyaemr_rms_data_exchange_cashier-bill-attribute-type-20250525" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_bill_attribute_type"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="rms_bill_attribute_type">
+            <column name="bill_attribute_type_id" autoIncrement="true" type="int">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="name" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="format" type="varchar(50)"/>
+            <column name="foreign_key" type="int"/>
+            <column name="searchable" type="tinyint(1)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int" defaultValue="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="retired" type="tinyint(1)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retired_by" type="int"/>
+            <column name="date_retired" type="datetime"/>
+            <column name="retire_reason" type="varchar(255)"/>
+            <column name="edit_privilege" type="varchar(255)"/>
+            <column name="sort_weight" type="double"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Constraints -->
+
+        <addUniqueConstraint 
+            columnNames="uuid" 
+            constraintName="uk_rms_bill_attribute_type_uuid" 
+            tableName="rms_bill_attribute_type"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_bill_attr_type_changer"
+            baseTableName="rms_bill_attribute_type"
+            baseColumnNames="changed_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_bill_attr_type_creator"
+            baseTableName="rms_bill_attribute_type"
+            baseColumnNames="creator"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_bill_privilege_edit"
+            baseTableName="rms_bill_attribute_type"
+            baseColumnNames="edit_privilege"
+            referencedTableName="privilege"
+            referencedColumnNames="privilege"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_user_retired_bill_attr_type"
+            baseTableName="rms_bill_attribute_type"
+            baseColumnNames="retired_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <!-- Indexes -->
+        <createIndex indexName="attribute_is_searchable" tableName="rms_bill_attribute_type">
+            <column name="searchable"/>
+        </createIndex>
+
+        <createIndex indexName="name_of_attribute" tableName="rms_bill_attribute_type">
+            <column name="name"/>
+        </createIndex>
+
+        <createIndex indexName="bill_attribute_type_retired_status" tableName="rms_bill_attribute_type">
+            <column name="retired"/>
+        </createIndex>
+
+        <createIndex indexName="attribute_type_changer" tableName="rms_bill_attribute_type">
+            <column name="changed_by"/>
+        </createIndex>
+
+        <createIndex indexName="attribute_type_creator" tableName="rms_bill_attribute_type">
+            <column name="creator"/>
+        </createIndex>
+
+        <createIndex indexName="user_who_retired_payment_attribute_type" tableName="rms_bill_attribute_type">
+            <column name="retired_by"/>
+        </createIndex>
+
+        <createIndex indexName="privilege_which_can_edit" tableName="rms_bill_attribute_type">
+            <column name="edit_privilege"/>
+        </createIndex>
+
+    </changeSet>
+
+    <!-- create rms_payment_attribute_type table -->
+    <changeSet id="kenyaemr_rms_data_exchange_cashier-payment-attr-type-20250525" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_payment_attribute_type"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="rms_payment_attribute_type">
+            <column name="payment_attribute_type_id" autoIncrement="true" type="int">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="name" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="text"/>
+            <column name="format" type="varchar(50)"/>
+            <column name="foreign_key" type="int"/>
+            <column name="searchable" type="tinyint(1)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int" defaultValue="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="retired" type="tinyint(1)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="retired_by" type="int"/>
+            <column name="date_retired" type="datetime"/>
+            <column name="retire_reason" type="varchar(255)"/>
+            <column name="edit_privilege" type="varchar(255)"/>
+            <column name="sort_weight" type="double"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Constraints -->
+
+        <addUniqueConstraint 
+            columnNames="uuid" 
+            constraintName="uk_rms_payment_attribute_type_uuid" 
+            tableName="rms_payment_attribute_type"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_pay_attr_type_changer"
+            baseTableName="rms_payment_attribute_type"
+            baseColumnNames="changed_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_pay_attr_type_creator"
+            baseTableName="rms_payment_attribute_type"
+            baseColumnNames="creator"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_pay_privilege_edit"
+            baseTableName="rms_payment_attribute_type"
+            baseColumnNames="edit_privilege"
+            referencedTableName="privilege"
+            referencedColumnNames="privilege"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_user_retired_pay_attr_type"
+            baseTableName="rms_payment_attribute_type"
+            baseColumnNames="retired_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <!-- Indexes -->
+        <createIndex indexName="attribute_is_searchable" tableName="rms_payment_attribute_type">
+            <column name="searchable"/>
+        </createIndex>
+
+        <createIndex indexName="name_of_attribute" tableName="rms_payment_attribute_type">
+            <column name="name"/>
+        </createIndex>
+
+        <createIndex indexName="payment_attribute_type_retired_status" tableName="rms_payment_attribute_type">
+            <column name="retired"/>
+        </createIndex>
+
+        <createIndex indexName="attribute_type_changer" tableName="rms_payment_attribute_type">
+            <column name="changed_by"/>
+        </createIndex>
+
+        <createIndex indexName="attribute_type_creator" tableName="rms_payment_attribute_type">
+            <column name="creator"/>
+        </createIndex>
+
+        <createIndex indexName="user_who_retired_payment_attribute_type" tableName="rms_payment_attribute_type">
+            <column name="retired_by"/>
+        </createIndex>
+
+        <createIndex indexName="privilege_which_can_edit" tableName="rms_payment_attribute_type">
+            <column name="edit_privilege"/>
+        </createIndex>
+
+    </changeSet>
+
+    <!-- Create table to store Cashier Bill Attributes -->
+    <!-- <changeSet id="kenyaemr_rms_data_exchange_rms_bill_attribute_20250417" author="pwaweru">
+
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_bill_attribute"/>
+            </not>
+        </preConditions>
+        <comment>
+            Create table to store Cashier Bill Attributes
+        </comment>
+        <createTable tableName="rms_bill_attribute">
+			<column name="bill_attribute_id" type="int" autoIncrement="true">
+				<constraints primaryKey="true" nullable="false" />
 			</column>
-			<column name="uuid" type="char(38)">
-				<constraints nullable="false" unique="true"></constraints>
-			</column>
-			<column name="owner" type="int" />
-			<column name="description" type="varchar(255)" />
+			<column name="bill_id" type="int"><constraints nullable="false" /></column>
+			<column name="bill_attribute_type_id" type="int"><constraints nullable="false" /></column>
+			<column name="value" type="text"><constraints nullable="false" /></column>
+            <column name="creator" type="int"/>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_voided" type="datetime"/>
+            <column name="voided_reason" type="varchar(255)"/>
+			<column name="uuid" type="char(38)"><constraints nullable="false" unique="true" /></column>
 		</createTable>
-        <addForeignKeyConstraint constraintName="rmsdataexchange_item_owner_fk" baseTableName="rmsdataexchange_item" baseColumnNames="owner"  referencedTableName="users"
-                                 referencedColumnNames="user_id" />
     </changeSet> -->
+
+    <!-- create rms_bill_attribute table -->
+    <changeSet id="kenyaemr_rms_data_exchange_rms_bill_attribute_20250417" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_bill_attribute"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="rms_bill_attribute">
+            <column name="bill_attribute_id" autoIncrement="true" type="int">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="bill_id" type="int" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="varchar(50)" defaultValue="">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bill_attribute_type_id" type="int" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int" defaultValue="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="voided" type="tinyint(1)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Constraints -->
+
+        <addUniqueConstraint 
+            columnNames="uuid" 
+            constraintName="uk_rms_bill_attribute_uuid" 
+            tableName="rms_bill_attribute"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_bill_attr_changer"
+            baseTableName="rms_bill_attribute"
+            baseColumnNames="changed_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_bill_attr_creator"
+            baseTableName="rms_bill_attribute"
+            baseColumnNames="creator"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_bill_attr_voider"
+            baseTableName="rms_bill_attribute"
+            baseColumnNames="voided_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_bill_attr_type"
+            baseTableName="rms_bill_attribute"
+            baseColumnNames="bill_attribute_type_id"
+            referencedTableName="rms_bill_attribute_type"
+            referencedColumnNames="bill_attribute_type_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_identifies_bill"
+            baseTableName="rms_bill_attribute"
+            baseColumnNames="bill_id"
+            referencedTableName="cashier_bill"
+            referencedColumnNames="bill_id"/>
+
+        <!-- Indexes -->
+        <createIndex indexName="attribute_changer" tableName="rms_bill_attribute">
+            <column name="changed_by"/>
+        </createIndex>
+
+        <createIndex indexName="attribute_creator" tableName="rms_bill_attribute">
+            <column name="creator"/>
+        </createIndex>
+
+        <createIndex indexName="defines_attribute_type" tableName="rms_bill_attribute">
+            <column name="bill_attribute_type_id"/>
+        </createIndex>
+
+        <createIndex indexName="identifies_bill" tableName="rms_bill_attribute">
+            <column name="bill_id"/>
+        </createIndex>
+
+        <createIndex indexName="attribute_voider" tableName="rms_bill_attribute">
+            <column name="voided_by"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- create rms_payment_attribute table -->
+    <changeSet id="kenyaemr_rms_data_exchange_cashier-payment-attribute_20250524" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_payment_attribute"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="rms_payment_attribute">
+            <column name="payment_attribute_id" autoIncrement="true" type="int">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="bill_payment_id" type="int" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="varchar(50)" defaultValue="">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payment_attribute_type_id" type="int" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int" defaultValue="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="voided" type="tinyint(1)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Constraints -->
+
+        <addUniqueConstraint 
+            columnNames="uuid" 
+            constraintName="uk_rms_payment_attribute_uuid" 
+            tableName="rms_payment_attribute"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_pay_attr_changer"
+            baseTableName="rms_payment_attribute"
+            baseColumnNames="changed_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_pay_attr_creator"
+            baseTableName="rms_payment_attribute"
+            baseColumnNames="creator"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_pay_attr_voider"
+            baseTableName="rms_payment_attribute"
+            baseColumnNames="voided_by"
+            referencedTableName="users"
+            referencedColumnNames="user_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_pay_attr_type"
+            baseTableName="rms_payment_attribute"
+            baseColumnNames="payment_attribute_type_id"
+            referencedTableName="rms_payment_attribute_type"
+            referencedColumnNames="payment_attribute_type_id"/>
+
+        <addForeignKeyConstraint 
+            constraintName="fk_identifies_bill_payment"
+            baseTableName="rms_payment_attribute"
+            baseColumnNames="bill_payment_id"
+            referencedTableName="cashier_bill_payment"
+            referencedColumnNames="bill_payment_id"/>
+
+        <!-- Indexes -->
+        <createIndex indexName="attribute_changer" tableName="rms_payment_attribute">
+            <column name="changed_by"/>
+        </createIndex>
+
+        <createIndex indexName="attribute_creator" tableName="rms_payment_attribute">
+            <column name="creator"/>
+        </createIndex>
+
+        <createIndex indexName="defines_attribute_type" tableName="rms_payment_attribute">
+            <column name="payment_attribute_type_id"/>
+        </createIndex>
+
+        <createIndex indexName="identifies_bill_payment" tableName="rms_payment_attribute">
+            <column name="bill_payment_id"/>
+        </createIndex>
+
+        <createIndex indexName="attribute_voider" tableName="rms_payment_attribute">
+            <column name="voided_by"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- Inserting RMS System Synchronized to bill attribute types table -->
+    <changeSet id="kenyaemr_rms_data_exchange_rms_synced_to_bill_attribute_types" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_bill_attribute_type
+                WHERE uuid = '78a8fdd0-42fa-4a21-924f-3d035b4cc0bb'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System Synchronized to bill attribute types table</comment>
+        <insert tableName="rms_bill_attribute_type">
+            <column name="name" value="RMS Sync State" />
+            <column name="format" value="java.lang.String" />
+            <column name="description" value="RMS System Synchronized" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+            <column name="sort_weight" value="0" />
+            <column name="uuid" value="78a8fdd0-42fa-4a21-924f-3d035b4cc0bb" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting RMS System Synchronized to payment attribute types table -->
+    <changeSet id="kenyaemr_rms_data_exchange_rms_synced_to_payment_attr_types" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_payment_attribute_type
+                WHERE uuid = 'b442d94b-2a48-4d69-b47e-80049e8e0735'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System Synchronized to payment attribute types table</comment>
+        <insert tableName="rms_payment_attribute_type">
+            <column name="name" value="RMS Sync State" />
+            <column name="format" value="java.lang.String" />
+            <column name="description" value="RMS System Synchronized" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+            <column name="sort_weight" value="0" />
+            <column name="uuid" value="b442d94b-2a48-4d69-b47e-80049e8e0735" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting RMS System Synchronized to person attribute types table -->
+    <changeSet id="kenyaemr_rms_data_exchange_rms_synced_to_person_attr_types" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM person_attribute_type
+                WHERE uuid = '93154976-6659-47ad-b0d5-bc112ac7bd5d'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System Synchronized to person attribute types table</comment>
+        <insert tableName="person_attribute_type">
+            <column name="name" value="RMS Sync State" />
+            <column name="format" value="java.lang.String" />
+            <column name="description" value="RMS System Synchronized" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+            <column name="sort_weight" value="0" />
+            <column name="uuid" value="93154976-6659-47ad-b0d5-bc112ac7bd5d" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting Wonder Health System Synchronized to person attribute types table -->
+    <changeSet id="kenyaemr_rms_data_exchange_wonder_synced_to_person_attr_types" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM person_attribute_type
+                WHERE uuid = '8f1d38cc-8d52-4513-bd8a-b14272cfac2d'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting Wonder Health System Synchronized to person attribute types table</comment>
+        <insert tableName="person_attribute_type">
+            <column name="name" value="Wonder Health Sync State" />
+            <column name="format" value="java.lang.String" />
+            <column name="description" value="Wonder Health System Synchronized" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+            <column name="sort_weight" value="0" />
+            <column name="uuid" value="8f1d38cc-8d52-4513-bd8a-b14272cfac2d" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting Wonder Health System Synchronized to visit attribute types table -->
+    <!-- <changeSet id="kenyaemr_rms_data_exchange_wonder_synced_to_visit_attr_types" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM visit_attribute_type
+                WHERE uuid = '99aed12b-d502-41c3-94cb-b5dcaa7fad1b'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting Wonder Health System Synchronized to visit attribute types table</comment>
+        <insert tableName="visit_attribute_type">
+            <column name="name" value="Wonder Health Sync State" />
+            <column name="format" value="java.lang.String" />
+            <column name="description" value="Wonder Health System Synchronized" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+            <column name="sort_weight" value="0" />
+            <column name="uuid" value="99aed12b-d502-41c3-94cb-b5dcaa7fad1b" />
+        </insert>
+    </changeSet> -->
+
+    <!-- Inserting RMS System - Patient to rms_queue_system table -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_add_rms_system_patient" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_queue_system
+                WHERE uuid = 'cc4296a9-2417-43c5-a6b3-da8d30e616cb'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System - Patient to rms_queue_system table</comment>
+        <insert tableName="rms_queue_system">
+            <column name="description" value="RMS System - Patient" />
+            <column name="uuid" value="cc4296a9-2417-43c5-a6b3-da8d30e616cb" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting RMS System - Bill to rms_queue_system table -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_add_rms_system_bill" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_queue_system
+                WHERE uuid = 'c167b7e4-ccf2-474c-ab08-38597df3e616'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System - Bill to rms_queue_system table</comment>
+        <insert tableName="rms_queue_system">
+            <column name="description" value="RMS System - Bill" />
+            <column name="uuid" value="c167b7e4-ccf2-474c-ab08-38597df3e616" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting RMS System - Bill Payment to rms_queue_system table -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_add_rms_system_payment" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_queue_system
+                WHERE uuid = 'b0573425-7439-4115-a24e-f0e8baa4992f'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System - Bill Payment to rms_queue_system table</comment>
+        <insert tableName="rms_queue_system">
+            <column name="description" value="RMS System - Bill Payment" />
+            <column name="uuid" value="b0573425-7439-4115-a24e-f0e8baa4992f" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting Wonder Health System - Patient to rms_queue_system table -->
+    <changeSet id="kenyaemr_rms_data_exchange_q_sys_wonder_health_system_patient" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_queue_system
+                WHERE uuid = '45fdaa7c-3119-4c28-b621-bb8ef2c20486'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting Wonder Health System - Patient to rms_queue_system table</comment>
+        <insert tableName="rms_queue_system">
+            <column name="description" value="Wonder Health System - Patient" />
+            <column name="uuid" value="45fdaa7c-3119-4c28-b621-bb8ef2c20486" />
+            <column name="creator" value="1" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+        </insert>
+    </changeSet>
+
+    <!--Adding scheduled task to process rms queue-->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_scheduled_task_20250415_101854" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM scheduler_task_config
+                WHERE schedulable_class = 'org.openmrs.module.rmsdataexchange.task.PushRMSQueueTask'
+                And name = 'Push RMS Queue Task'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting processor for rms queue into 'schedule_task_config' table</comment>
+        <insert tableName="scheduler_task_config">
+            <column name="name" value="Push RMS Queue Task" />
+            <column name="description" value="Push RMS Queue payload to remote systems" />
+            <column name="schedulable_class" value="org.openmrs.module.rmsdataexchange.task.PushRMSQueueTask" />
+            <column name="start_time_pattern" value="MM/dd/yyyy HH:mm:ss" />
+            <column name="start_time" valueDate="2025-04-01T23:59:59" />
+            <column name="repeat_interval" value="1999999999" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+            <column name="created_by" value="1" />
+            <column name="start_on_startup" value="0" />
+            <column name="started" value="0" />
+            <column name="uuid" value="37528f91-1480-4d2e-8731-c97056e109f8" />
+        </insert>
+    </changeSet>
  
 </databaseChangeLog>

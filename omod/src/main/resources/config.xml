@@ -7,7 +7,7 @@
 	<name>${project.parent.name}</name>
 	<version>${project.parent.version}</version>
 	<package>org.openmrs.module.rmsdataexchange</package>
-	<author>patrick</author>
+	<author>Palladium KeHMIS</author>
 	<description>
 			${project.parent.description}
 	</description>
@@ -22,20 +22,20 @@
 	<require_modules>
 		<!-- <require_module version="${metadatadeployVersion}">org.openmrs.module.metadatadeploy</require_module> -->
 		<require_module version="${restWebServicesVersion}">org.openmrs.module.webservices.rest</require_module>
+		<require_module version="${fhir2Version}">org.openmrs.module.fhir2</require_module>
 		<require_module version="${stockManagementVersion}">org.openmrs.module.stockmanagement</require_module>
 		<require_module version="${cashierVersion}">
 			org.openmrs.module.kenyaemr.cashier
-		</require_module>
-		<require_module version="${fhir2Version}">org.openmrs.module.fhir2</require_module>
+		</require_module>		
 	</require_modules>
 
-	<aware_of_modules>
-		<!-- <aware_of_module>org.openmrs.module.metadatadeploy</aware_of_module> -->
+	<!-- <aware_of_modules>
+		<aware_of_module>org.openmrs.module.metadatadeploy</aware_of_module>
 		<aware_of_module>org.openmrs.module.webservices.rest</aware_of_module>
 		<aware_of_module>org.openmrs.module.stockmanagement</aware_of_module>
 		<aware_of_module>org.openmrs.module.kenyaemr.cashier</aware_of_module>
 		<aware_of_module>org.openmrs.module.fhir2</aware_of_module>
-	</aware_of_modules>
+	</aware_of_modules> -->
 	
 	<advice>
 		<point>org.openmrs.api.PatientService</point>
@@ -47,6 +47,7 @@
 		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth</class>
 	</advice>
 
+	<!-- No need to trap the bill here. We have it trapped at the bean interceptor -->
 	<!-- <advice>
 		<point>org.openmrs.module.kenyaemr.cashier.api.IBillService</point>
 		<class>org.openmrs.module.rmsdataexchange.advice.NewBillCreationSyncToRMS</class>
@@ -124,6 +125,16 @@
 		<description>wonder health integration auth token</description>
 		<defaultValue></defaultValue>
 	</globalProperty>
+
+	<!-- Maps hibernate file's, if present -->
+	<mappingFiles>
+		RMSQueue.hbm.xml
+		RMSQueueSystem.hbm.xml
+		RMSBillAttributes.hbm.xml
+		RMSBillAttributeTypes.hbm.xml
+		RMSPaymentAttributes.hbm.xml
+		RMSPaymentAttributeTypes.hbm.xml
+	</mappingFiles>
 
 	<!-- Internationalization -->
 	<!-- All message codes should start with @MODULE_ID@.* -->

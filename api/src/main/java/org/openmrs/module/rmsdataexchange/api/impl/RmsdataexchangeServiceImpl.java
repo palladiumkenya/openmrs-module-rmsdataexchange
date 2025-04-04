@@ -9,17 +9,24 @@
  */
 package org.openmrs.module.rmsdataexchange.api.impl;
 
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.exception.DataException;
 import org.openmrs.Patient;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
 import org.openmrs.api.UserService;
+import org.openmrs.api.db.DAOException;
 import org.openmrs.api.impl.BaseOpenmrsService;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeDao;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
-import org.openmrs.module.rmsdataexchange.api.dao.RmsdataexchangeDao;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSQueue;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
 import org.springframework.transaction.annotation.Transactional;
 import org.openmrs.module.kenyaemr.cashier.api.util.PrivilegeConstants;
+
+import java.util.List;
 import java.util.Set;
 
 public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements RmsdataexchangeService {
@@ -62,5 +69,40 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	public Set<Payment> getPaymentsByBillId(Integer billId) {
 		Set<Payment> payments = dao.getPaymentsByBillId(billId);
 		return payments;
+	}
+	
+	@Override
+	public List<RMSQueue> getQueueItems() {
+		return (dao.getQueueItems());
+	}
+	
+	@Override
+	public RMSQueue saveQueueItem(RMSQueue queue) {
+		return (dao.saveQueueItem(queue));
+	}
+	
+	@Override
+	public RMSQueue getQueueItemByUUID(String queueUUID) throws DataException {
+		return (dao.getQueueItemByUUID(queueUUID));
+	}
+	
+	@Override
+	public RMSQueue getQueueItemByID(Integer queueID) throws DataException {
+		return (dao.getQueueItemByID(queueID));
+	}
+	
+	@Override
+	public RMSQueue removeQueueItem(RMSQueue queue) throws DAOException {
+		return (dao.removeQueueItem(queue));
+	}
+	
+	@Override
+	public RMSQueueSystem getQueueSystemByUUID(String queueSystemUUID) throws DataException {
+		return (dao.getQueueSystemByUUID(queueSystemUUID));
+	}
+	
+	@Override
+	public RMSQueueSystem getQueueSystemByID(Integer queueSystemID) throws DataException {
+		return (dao.getQueueSystemByID(queueSystemID));
 	}
 }
