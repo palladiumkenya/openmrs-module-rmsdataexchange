@@ -661,7 +661,10 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Start sending patient to RMS");
 				
-				sendWonderHealthPatientRegistration(patient);
+				Boolean sendResult = sendWonderHealthPatientRegistration(patient);
+				if(sendResult == false){
+					// Failed to send the payload. We put it in the queue
+				}
 				
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Finished sending patient to RMS");
