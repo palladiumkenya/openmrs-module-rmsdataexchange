@@ -132,7 +132,7 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 	private static String getBillItemCategory(BillLineItem billLineItem) {
 		Concept itemCategory = billLineItem.getBillableService().getServiceCategory();
 		if (itemCategory == null) {
-			return "";
+			return "Triage";
 		}
 		return itemCategory.getFullySpecifiedName(Locale.ENGLISH).getName();
 	}
