@@ -8,6 +8,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.openmrs.GlobalProperty;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
+import org.openmrs.module.rmsdataexchange.queue.model.RmsQueue;
+import org.openmrs.module.rmsdataexchange.queue.model.RmsQueueSystem;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class AdviceUtils {
 	
@@ -121,7 +125,7 @@ public class AdviceUtils {
 		if (baseURL == null || baseURL.trim().isEmpty()) {
 			baseURL = "https://siaya.tsconect.com/api";
 		}
-		ret = baseURL;
+		ret = baseURL.trim();
 		
 		return (ret);
 	}
@@ -140,7 +144,7 @@ public class AdviceUtils {
 		if (baseURL == null || baseURL.trim().isEmpty()) {
 			baseURL = " https://kenyafhirtest.iwonderpro.com/FHIRAPI/create/login";
 		}
-		ret = baseURL;
+		ret = baseURL.trim();
 		
 		return (ret);
 	}
@@ -177,7 +181,7 @@ public class AdviceUtils {
 		if (baseURL == null || baseURL.trim().isEmpty()) {
 			baseURL = "https://kenyafhirtest.iwonderpro.com/FHIRAPI/create";
 		}
-		ret = baseURL;
+		ret = baseURL.trim();
 		
 		return (ret);
 	}
@@ -193,7 +197,7 @@ public class AdviceUtils {
 		GlobalProperty rmsUserGP = Context.getAdministrationService().getGlobalPropertyObject(
 		    RMSModuleConstants.RMS_USERNAME);
 		String rmsUser = rmsUserGP.getPropertyValue();
-		ret = (rmsUser == null || rmsUser.trim().isEmpty()) ? "" : rmsUser;
+		ret = (rmsUser == null || rmsUser.trim().isEmpty()) ? "" : rmsUser.trim();
 		
 		return (ret);
 	}
@@ -209,7 +213,7 @@ public class AdviceUtils {
 		GlobalProperty rmsPasswordGP = Context.getAdministrationService().getGlobalPropertyObject(
 		    RMSModuleConstants.RMS_PASSWORD);
 		String rmsPassword = rmsPasswordGP.getPropertyValue();
-		ret = (rmsPassword == null || rmsPassword.trim().isEmpty()) ? "" : rmsPassword;
+		ret = (rmsPassword == null || rmsPassword.trim().isEmpty()) ? "" : rmsPassword.trim();
 		
 		return (ret);
 	}
@@ -233,6 +237,62 @@ public class AdviceUtils {
 		return (ret);
 	}
 	
+	/**
+	 * Gets a random integer between lower and upper
+	 * 
+	 * @param lower
+	 * @param upper
+	 * @return
+	 */
+	public static int getRandomInt(int lower, int upper) {
+		if (lower > upper) {
+			throw new IllegalArgumentException(
+			        "rmsdataexchange Module: getRandomInt Error : Lower limit must be less than or equal to upper limit");
+		}
+		return ThreadLocalRandom.current().nextInt(lower, upper + 1);
+	}
+	
+	/**
+	 * Adds payload to queue for later processing
+	 * 
+	 * @param payload
+	 * @return
+	 */
+	public static Boolean addSyncPayloadToQueue(String payload, RmsQueueSystem rmsQueueSystem) {
+		Boolean ret = false;
+		Boolean debugMode = isRMSLoggingEnabled();
+		try {
+			// get the system
+			RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+			if (rmsdataexchangeService != null) {
+				if (rmsQueueSystem != null) {
+					RmsQueue rmsQueue = new RmsQueue();
+					rmsQueue.setPayload(payload);
+					rmsQueue.setSystem(rmsQueueSystem);
+					
+					rmsdataexchangeService.saveQueueItem(rmsQueue);
+					return (true);
+				} else {
+					if (debugMode)
+						System.err
+						        .println("rmsdataexchange Module: Error saving payload to the queue: Failed to get the queue system");
+				}
+			} else {
+				if (debugMode)
+					System.err
+					        .println("rmsdataexchange Module: Error saving payload to the queue: Failed to load RMS service");
+			}
+			
+		}
+		catch (Exception ex) {
+			if (debugMode)
+				System.err.println("rmsdataexchange Module: Error saving payload to the queue: "
+				        + ex.getMessage());
+			ex.printStackTrace();
+		}
+		return (ret);
+	}
+
 	/**
 	 * Get the status of sync chores
 	 * 

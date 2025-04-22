@@ -223,8 +223,8 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 						// We send the payload to RMS
 						if (debugMode)
 							System.err
-							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill details. Token: "
-							                + token);
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill details. Payload: "
+							                + payload);
 						String finalUrl = baseURL + "/create-bill";
 						if (debugMode)
 							System.out.println("rmsdataexchange Module: Final Create Bill URL: " + finalUrl);
@@ -292,8 +292,25 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 							
 						} else {
 							if (debugMode)
-								System.err.println("rmsdataexchange Module: Failed to send New Bill final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send New Bill to RMS: Error Code: "
 								        + finalResponseCode);
+							try {
+								// Use getErrorStream() to get the error message content
+								BufferedReader reader = new BufferedReader(
+								        new InputStreamReader(connection.getErrorStream()));
+								String line;
+								StringBuilder errorResponse = new StringBuilder();
+								while ((line = reader.readLine()) != null) {
+									errorResponse.append(line);
+								}
+								reader.close();
+								
+								// Output the error message/content
+								System.out
+								        .println("rmsdataexchange Module: Failed to send New Bill to RMS: Error Response: "
+								                + errorResponse.toString());
+							}
+							catch (Exception et) {}
 						}
 					}
 					catch (Exception em) {
@@ -339,18 +356,56 @@ public class NewBillCreationSyncToRMS implements AfterReturningAdvice {
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Start sending Bill to RMS");
 				
+				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
+				
 				// If the patient doesnt exist, send the patient to RMS
 				if (debugMode)
 					System.out.println("RMS Sync RMSDataExchange Module Bill: Send the patient first");
-				NewPatientRegistrationSyncToRMS.sendRMSPatientRegistration(bill.getPatient());
+				Boolean testPatientSending = NewPatientRegistrationSyncToRMS.sendRMSPatientRegistration(bill.getPatient());
+				
+				if (testPatientSending) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending Patient to RMS");
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send Patient to RMS");
+				}
+				
+				sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
 				
 				// Now we can send the bill
 				if (debugMode)
 					System.out.println("RMS Sync RMSDataExchange Module Bill: Now Send the bill");
-				sendRMSNewBill(bill);
 				
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Finished sending Bill to RMS");
+				Boolean testBillSending = sendRMSNewBill(bill);
+				
+				if (testBillSending) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending Bill to RMS");
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send Bill to RMS");
+				}
 			}
 			catch (Exception ex) {
 				if (debugMode)

@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.openmrs.module.webservices.rest.web.v1_0.controller.BaseRestController;
 import org.openmrs.module.webservices.rest.web.RestConstants;
 
-@Controller
+// @Controller
 @RequestMapping(value = "/rest/" + RestConstants.VERSION_1 + "/rmsdataexchange/api")
 public class RMSDataExchangeRestController extends BaseRestController {
 	

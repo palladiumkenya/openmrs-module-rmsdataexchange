@@ -48,6 +48,14 @@ public class RMSModuleConstants {
 	
 	public static final String WONDERHEALTH_PASSWORD = "rmsdataexchange.wonderhealth.integration.password";
 	
+	public static final String RMS_SYSTEM_PATIENT = "cc4296a9-2417-43c5-a6b3-da8d30e616cb";
+
+	public static final String RMS_SYSTEM_BILL = "c167b7e4-ccf2-474c-ab08-38597df3e616";
+
+	public static final String RMS_SYSTEM_PAYMENT = "b0573425-7439-4115-a24e-f0e8baa4992f";
+	
+	public static final String WONDER_HEALTH_SYSTEM_PATIENT = "45fdaa7c-3119-4c28-b621-bb8ef2c20486";
+	
 	protected RMSModuleConstants() {
 	}
 }

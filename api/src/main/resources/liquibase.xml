@@ -4,36 +4,218 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog/1.9
                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-1.9.xsd">
- 
-    <!--
-    	See http://wiki.openmrs.org/display/docs/Module+liquibase+File for 
-    	documentation on this file.
-    
-        See http://www.liquibase.org/manual/home#available_database_refactorings
-        for a list of supported elements and attributes
-    -->
- 
- 	<!-- Uncomment the changeset below if you want to make the Item class persistable, see also Item and RmsdataexchangeDaoTest -->
- 	<!--
-	<changeSet id="rmsdataexchange-2016-08-02-12-21" author="raff">
-		<preConditions onFail="MARK_RAN">
-			<not><tableExists tableName="rmsdataexchange_item"/></not>
-		</preConditions>
-		<comment>
-			Creating the rmsdataexchange_item table
-		</comment>
-		<createTable tableName="rmsdataexchange_item">
-			<column name="rmsdataexchange_item_id" type="int" autoIncrement="true">
-				<constraints primaryKey="true" nullable="false"/>
+
+    <!--  RMS QUEUE TABLE DESIGN -->
+    <!-- Create table to store rms queue -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_table_20250415_082554" author="pwaweru">
+
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_queue"/>
+            </not>
+        </preConditions>
+        <comment>
+            Create table to store rms queue
+        </comment>
+        <createTable tableName="rms_queue">
+            <column name="id" autoIncrement="true" type="int">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="system" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reties" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="payload" type="varchar(65535)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int"/>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="voided_reason" type="varchar(255)"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="rms_queue" baseColumnNames="id"
+                                 constraintName="rms_queue_system_reference"
+                                 referencedTableName="rms_queue_system"
+                                 referencedColumnNames="id"
+                                 deferrable="false" initiallyDeferred="false"/>
+    </changeSet>
+
+    <!-- Create table to store RMS Queue System -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_table_20250415_100054" author="pwaweru">
+
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rms_queue_system"/>
+            </not>
+        </preConditions>
+        <comment>
+            Create table to store RMS Queue System
+        </comment>
+        <createTable tableName="rms_queue_system">
+            <column name="id" autoIncrement="true" type="int">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="description" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int"/>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_voided" type="datetime"/>
+            <column name="voided_reason" type="varchar(255)"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- Create table to store Cashier Bill Attributes -->
+    <changeSet id="kenyaemr_rms_data_exchange_cashier_bill_attribute_table_20250417_100054" author="pwaweru">
+
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="cashier_bill_attribute"/>
+            </not>
+        </preConditions>
+        <comment>
+            Create table to store Cashier Bill Attributes
+        </comment>
+        <createTable tableName="cashier_bill_attribute">
+			<column name="bill_attribute_id" type="int" autoIncrement="true">
+				<constraints primaryKey="true" nullable="false" />
 			</column>
-			<column name="uuid" type="char(38)">
-				<constraints nullable="false" unique="true"></constraints>
-			</column>
-			<column name="owner" type="int" />
-			<column name="description" type="varchar(255)" />
+			<column name="bill_id" type="int"><constraints nullable="false" /></column>
+			<column name="bill_attribute_type_id" type="int"><constraints nullable="false" /></column>
+			<column name="value" type="text"><constraints nullable="false" /></column>
+            <column name="creator" type="int"/>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="true"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column defaultValueBoolean="false" name="voided" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_voided" type="datetime"/>
+            <column name="voided_reason" type="varchar(255)"/>
+			<column name="uuid" type="char(38)"><constraints nullable="false" unique="true" /></column>
 		</createTable>
-        <addForeignKeyConstraint constraintName="rmsdataexchange_item_owner_fk" baseTableName="rmsdataexchange_item" baseColumnNames="owner"  referencedTableName="users"
-                                 referencedColumnNames="user_id" />
-    </changeSet> -->
+    </changeSet>
+
+    <!-- Inserting RMS System - Patient to rms_queue_system table -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_add_rms_system_patient_20250416_160054" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_queue_system
+                WHERE uuid = 'cc4296a9-2417-43c5-a6b3-da8d30e616cb'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System - Patient to rms_queue_system table</comment>
+        <insert tableName="rms_queue_system">
+            <column name="description" value="RMS System - Patient" />
+            <column name="uuid" value="cc4296a9-2417-43c5-a6b3-da8d30e616cb" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting RMS System - Bill to rms_queue_system table -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_add_rms_system_bill_20250417_150054" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_queue_system
+                WHERE uuid = 'c167b7e4-ccf2-474c-ab08-38597df3e616'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System - Bill to rms_queue_system table</comment>
+        <insert tableName="rms_queue_system">
+            <column name="description" value="RMS System - Bill" />
+            <column name="uuid" value="c167b7e4-ccf2-474c-ab08-38597df3e616" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting RMS System - Bill Payment to rms_queue_system table -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_add_rms_system_payment_20250417_160054" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_queue_system
+                WHERE uuid = 'b0573425-7439-4115-a24e-f0e8baa4992f'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting RMS System - Bill Payment to rms_queue_system table</comment>
+        <insert tableName="rms_queue_system">
+            <column name="description" value="RMS System - Bill Payment" />
+            <column name="uuid" value="b0573425-7439-4115-a24e-f0e8baa4992f" />
+        </insert>
+    </changeSet>
+
+    <!-- Inserting Wonder Health System - Patient to rms_queue_system table -->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_system_add_wonder_health_system_patient_20250416_161054" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM rms_queue_system
+                WHERE uuid = '45fdaa7c-3119-4c28-b621-bb8ef2c20486'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting Wonder Health System - Patient to rms_queue_system table</comment>
+        <insert tableName="rms_queue_system">
+            <column name="description" value="Wonder Health System - Patient" />
+            <column name="uuid" value="45fdaa7c-3119-4c28-b621-bb8ef2c20486" />
+        </insert>
+    </changeSet>
+
+    <!--Adding scheduled task to process rms queue-->
+    <changeSet id="kenyaemr_rms_data_exchange_queue_scheduled_task_20250415_101854" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM scheduler_task_config
+                WHERE schedulable_class = 'org.openmrs.module.rmsdataexchange.task.PushRMSQueueTask'
+                And name = 'Push RMS Queue Task'
+            </sqlCheck>
+        </preConditions>
+        <comment>Inserting processor for rms queue into 'schedule_task_config' table</comment>
+        <insert tableName="scheduler_task_config">
+            <column name="name" value="Push RMS Queue Task" />
+            <column name="description" value="Push RMS Queue payload to remote systems" />
+            <column name="schedulable_class" value="org.openmrs.module.rmsdataexchange.task.PushRMSQueueTask" />
+            <column name="start_time_pattern" value="MM/dd/yyyy HH:mm:ss" />
+            <column name="start_time" valueDate="2025-04-01T23:59:59" />
+            <column name="repeat_interval" value="1800" />
+            <column name="date_created" valueDate="CURRENT_TIMESTAMP" />
+            <column name="created_by" value="1" />
+            <column name="start_on_startup" value="1" />
+            <column name="started" value="1" />
+            <column name="uuid" value="37528f91-1480-4d2e-8731-c97056e109f8" />
+        </insert>
+    </changeSet>
  
 </databaseChangeLog>
