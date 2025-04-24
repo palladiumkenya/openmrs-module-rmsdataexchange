@@ -14,12 +14,14 @@ import java.util.Set;
 
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.OpenmrsService;
+import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.kenyaemr.cashier.api.util.PrivilegeConstants;
 import org.openmrs.module.rmsdataexchange.queue.model.RmsQueue;
 import org.openmrs.module.rmsdataexchange.queue.model.RmsQueueSystem;
 import org.springframework.transaction.annotation.Transactional;
 import org.openmrs.Patient;
+import org.openmrs.Person;
 
 /**
  * The main service of this module, which is exposed for other modules. See
@@ -47,4 +49,10 @@ public interface RmsdataexchangeService extends OpenmrsService {
 	RmsQueueSystem getQueueSystemByUUID(String queueSystemUUID);
 	
 	RmsQueueSystem getQueueSystemByID(Integer queueSystemID);
+	
+	// Boolean getBillAttribute(Bill bill, String attributeUUID);
+	
+	// Boolean getPaymentAttribute(Payment payment, String attributeUUID);
+	
+	// Boolean getPersonAttribute(Person person, String attributeUUID);
 }

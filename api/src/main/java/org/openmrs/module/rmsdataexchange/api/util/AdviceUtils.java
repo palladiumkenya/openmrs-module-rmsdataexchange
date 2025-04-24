@@ -286,13 +286,12 @@ public class AdviceUtils {
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("rmsdataexchange Module: Error saving payload to the queue: "
-				        + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error saving payload to the queue: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		return (ret);
 	}
-
+	
 	/**
 	 * Get the status of sync chores
 	 * 

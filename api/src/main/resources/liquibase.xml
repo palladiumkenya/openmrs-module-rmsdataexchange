@@ -95,7 +95,7 @@
     </changeSet>
 
     <changeSet id="kenyaemr_rms_data_exchange_create-cashier-bill-attribute-type-table" author="pwaweru">
-        <preConditions>
+        <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="cashier_bill_attribute_type"/>
             </not>
@@ -263,7 +263,7 @@
     </changeSet>
 
     <changeSet id="kenyaemr_rms_data_exchange_create-cashier-payment-attribute-type-table" author="pwaweru">
-        <preConditions>
+        <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="cashier_payment_attribute_type"/>
             </not>
@@ -359,7 +359,7 @@
     </changeSet>
 
     <!-- Create table to store Cashier Bill Attributes -->
-    <changeSet id="kenyaemr_rms_data_exchange_cashier_bill_attribute_table_20250417_100054" author="pwaweru">
+    <!-- <changeSet id="kenyaemr_rms_data_exchange_cashier_bill_attribute_table_20250417_100054" author="pwaweru">
 
         <preConditions onFail="MARK_RAN">
             <not>
@@ -395,10 +395,104 @@
             <column name="voided_reason" type="varchar(255)"/>
 			<column name="uuid" type="char(38)"><constraints nullable="false" unique="true" /></column>
 		</createTable>
+    </changeSet> -->
+
+    <changeSet id="kenyaemr_rms_data_exchange_cashier_bill_attribute_table_20250417_100054" author="pwaweru">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="cashier_bill_attribute"/>
+            </not>
+        </preConditions>
+        <createTable tableName="cashier_bill_attribute">
+            <column name="bill_attribute_id" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bill_id" type="int" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="varchar(50)" defaultValue="">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bill_attribute_type_id" type="int" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="creator" type="int" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="date_created" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="changed_by" type="int"/>
+            <column name="date_changed" type="datetime"/>
+            <column name="voided" type="tinyint(1)" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="voided_by" type="int"/>
+            <column name="date_voided" type="datetime"/>
+            <column name="void_reason" type="varchar(255)"/>
+            <column name="uuid" type="char(38)">
+                <constraints nullable="false"/>
+            </column>
+
+            <constraint name="pk_cashier_bill_attribute" 
+                       primaryKeyName="bill_attribute_id" 
+                       type="primary"/>
+
+            <constraint name="uk_cashier_bill_attribute_uuid" 
+                       unique="true" 
+                       columnNames="uuid"/>
+
+            <constraint name="fk_bill_attr_changer" 
+                       foreignKeyName="cashier_bill_attribute_changer" 
+                       referencedTableName="users" 
+                       referencedColumnNames="user_id"
+                       columnNames="changed_by"/>
+
+            <constraint name="fk_bill_attr_creator" 
+                       foreignKeyName="cashier_bill_attribute_creator" 
+                       referencedTableName="users" 
+                       referencedColumnNames="user_id"
+                       columnNames="creator"/>
+
+            <constraint name="fk_bill_attr_voider" 
+                       foreignKeyName="cashier_bill_attribute_voider" 
+                       referencedTableName="users" 
+                       referencedColumnNames="user_id"
+                       columnNames="voided_by"/>
+
+            <constraint name="fk_bill_attr_type" 
+                       foreignKeyName="cashier_bill_defines_attribute_type" 
+                       referencedTableName="cashier_bill_attribute_type" 
+                       referencedColumnNames="bill_attribute_type_id"
+                       columnNames="bill_attribute_type_id"/>
+
+            <constraint name="fk_identifies_bill" 
+                       foreignKeyName="identifies_bill" 
+                       referencedTableName="cashier_bill" 
+                       referencedColumnNames="bill_id"
+                       columnNames="bill_id"/>
+        </createTable>
+
+        <!-- Indexes -->
+        <createIndex indexName="attribute_changer" 
+                     tableName="cashier_bill_attribute" 
+                     columnNames="changed_by"/>
+        <createIndex indexName="attribute_creator" 
+                     tableName="cashier_bill_attribute" 
+                     columnNames="creator"/>
+        <createIndex indexName="defines_attribute_type" 
+                     tableName="cashier_bill_attribute" 
+                     columnNames="bill_attribute_type_id"/>
+        <createIndex indexName="identifies_bill" 
+                     tableName="cashier_bill_attribute" 
+                     columnNames="bill_id"/>
+        <createIndex indexName="attribute_voider" 
+                     tableName="cashier_bill_attribute" 
+                     columnNames="voided_by"/>
     </changeSet>
 
     <changeSet id="kenyaemr_rms_data_exchange_create-cashier-payment-attribute-table" author="pwaweru">
-        <preConditions>
+        <preConditions onFail="MARK_RAN">
             <not>
                 <tableExists tableName="cashier_payment_attribute"/>
             </not>

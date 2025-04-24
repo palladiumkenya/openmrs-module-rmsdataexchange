@@ -23,28 +23,29 @@ public class PushRMSQueueTask extends AbstractTask {
 		// Get a list of all queue items
 		RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
 		List<RmsQueue> rmsQueueItems = rmsdataexchangeService.getQueueItems();
-		if(rmsQueueItems != null && rmsQueueItems.size() > 0) {
+		if (rmsQueueItems != null && rmsQueueItems.size() > 0) {
 			if (debugMode)
 				System.err.println("rmsdataexchange module: Queue Processing: There are some items in the queue");
-			for(RmsQueue item : rmsQueueItems) {
+			for (RmsQueue item : rmsQueueItems) {
 				// Get the payload
 				String payload = item.getPayload();
 				// Get the system used
 				RmsQueueSystem system = item.getSystem();
-				if(system.getUuid() == RMSModuleConstants.RMS_SYSTEM_PATIENT) {
+				if (system.getUuid() == RMSModuleConstants.RMS_SYSTEM_PATIENT) {
 					// This is a payload for RMS system Patient
-				} else if(system.getUuid() == RMSModuleConstants.RMS_SYSTEM_BILL) {
-						// This is a payload for RMS system Bill
-				} else if(system.getUuid() == RMSModuleConstants.RMS_SYSTEM_PAYMENT) {
-						// This is a payload for RMS system Bill Payment
-				} else if(system.getUuid() == RMSModuleConstants.WONDER_HEALTH_SYSTEM_PATIENT) {
+				} else if (system.getUuid() == RMSModuleConstants.RMS_SYSTEM_BILL) {
+					// This is a payload for RMS system Bill
+				} else if (system.getUuid() == RMSModuleConstants.RMS_SYSTEM_PAYMENT) {
+					// This is a payload for RMS system Bill Payment
+				} else if (system.getUuid() == RMSModuleConstants.WONDER_HEALTH_SYSTEM_PATIENT) {
 					// This is a payload for Wonder Health system Patient
 					Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
 					// Delay
 					try {
 						//Delay for random seconds
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Queue Processing: Sleep for milliseconds: " + sleepTime);
+							System.out.println("rmsdataexchange Module: Queue Processing: Sleep for milliseconds: "
+							        + sleepTime);
 						Thread.sleep(sleepTime);
 					}
 					catch (Exception ie) {
@@ -52,15 +53,17 @@ public class PushRMSQueueTask extends AbstractTask {
 					}
 					
 					NewPatientRegistrationSyncToWonderHealth newPatientRegistrationSyncToWonderHealth = new NewPatientRegistrationSyncToWonderHealth();
-					Boolean sendWonderHealthResult = newPatientRegistrationSyncToWonderHealth.sendWonderHealthPatientRegistration(payload);
+					Boolean sendWonderHealthResult = newPatientRegistrationSyncToWonderHealth
+					        .sendWonderHealthPatientRegistration(payload);
 					if (sendWonderHealthResult == false) {
 						// Failed to send the payload. We put it in the queue
 						if (debugMode)
 							System.err
-									.println("rmsdataexchange Module: Queue Processing: Failed to send patient to Wonder Health");
+							        .println("rmsdataexchange Module: Queue Processing: Failed to send patient to Wonder Health");
 					} else {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Queue Processing: Finished sending patient to Wonder Health");
+							System.out
+							        .println("rmsdataexchange Module: Queue Processing: Finished sending patient to Wonder Health");
 					}
 				}
 			}
