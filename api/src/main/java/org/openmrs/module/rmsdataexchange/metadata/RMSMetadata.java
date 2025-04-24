@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
 /**
  * RMS metadata bundle
  */
-@Component
+// @Component
 // public class RMSMetadata extends AbstractMetadataBundle {
 public class RMSMetadata {
 	

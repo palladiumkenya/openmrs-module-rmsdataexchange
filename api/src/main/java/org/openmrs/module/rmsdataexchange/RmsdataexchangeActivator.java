@@ -71,9 +71,6 @@ public class RmsdataexchangeActivator extends BaseModuleActivator {
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 		String formattedDateTime = currentDateTime.format(formatter);
 		
-		// Print the formatted current date and time to the console
-		// System.out.println("Current Date and Time: " + formattedDateTime);
-		
 		return (formattedDateTime);
 	}
 	

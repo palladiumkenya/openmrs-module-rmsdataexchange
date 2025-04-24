@@ -62,6 +62,7 @@ import org.openmrs.PersonName;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
+import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
 import org.openmrs.module.kenyaemr.cashier.util.Utils;
 import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
 import org.openmrs.util.PrivilegeConstants;
@@ -103,11 +104,12 @@ import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
 import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Reference;
+import org.openmrs.module.rmsdataexchange.queue.model.RmsQueueSystem;
 
 /**
  * Detects when a new visit has started and syncs patient data to Wonder Health
  */
-@Component("rmsdataexchange.NewPatientRegistrationSyncToWonderHealth")
+// @Component("rmsdataexchange.NewPatientRegistrationSyncToWonderHealth")
 public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningAdvice {
 	
 	private Boolean debugMode = false;
@@ -476,7 +478,7 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	 * @param patient
 	 * @return
 	 */
-	private Boolean sendWonderHealthPatientRegistration(@NotNull String patient) {
+	public Boolean sendWonderHealthPatientRegistration(@NotNull String patient) {
 		Boolean ret = false;
 		String payload = patient;
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
@@ -645,12 +647,12 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	 */
 	private class syncPatientRunnable implements Runnable {
 		
-		String patient = "";
+		String payload = "";
 		
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		
-		public syncPatientRunnable(@NotNull String patient) {
-			this.patient = patient;
+		public syncPatientRunnable(@NotNull String payload) {
+			this.payload = payload;
 		}
 		
 		@Override
@@ -659,16 +661,48 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 			
 			try {
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: Start sending patient to RMS");
+					System.out.println("rmsdataexchange Module: Start sending patient to Wonder Health");
 				
-				sendWonderHealthPatientRegistration(patient);
+				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
 				
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Finished sending patient to RMS");
+				Boolean sendWonderHealthResult = sendWonderHealthPatientRegistration(payload);
+				if (sendWonderHealthResult == false) {
+					// Failed to send the payload. We put it in the queue
+					if (debugMode)
+						System.err
+						        .println("rmsdataexchange Module: Failed to send patient to Wonder Health. Adding to queue");
+					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+					RmsQueueSystem rmsQueueSystem = rmsdataexchangeService
+					        .getQueueSystemByUUID(RMSModuleConstants.WONDER_HEALTH_SYSTEM_PATIENT);
+					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
+					if (addToQueue) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Finished adding patient to Wonder Health Queue");
+					} else {
+						if (debugMode)
+							System.err
+							        .println("rmsdataexchange Module: Error: Failed to add patient to Wonder Health Queue");
+					}
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending patient to Wonder Health");
+				}
+				
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("rmsdataexchange Module: Error. Failed to send patient to RMS: " + ex.getMessage());
+					System.err.println("rmsdataexchange Module: Error. Failed to send patient to Wonder Health: "
+					        + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}

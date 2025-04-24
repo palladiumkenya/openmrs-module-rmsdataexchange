@@ -7,7 +7,7 @@
 	<name>${project.parent.name}</name>
 	<version>${project.parent.version}</version>
 	<package>org.openmrs.module.rmsdataexchange</package>
-	<author>patrick</author>
+	<author>Palladium KeHMIS</author>
 	<description>
 			${project.parent.description}
 	</description>
@@ -29,13 +29,13 @@
 		<require_module version="${fhir2Version}">org.openmrs.module.fhir2</require_module>
 	</require_modules>
 
-	<aware_of_modules>
-		<!-- <aware_of_module>org.openmrs.module.metadatadeploy</aware_of_module> -->
+	<!-- <aware_of_modules>
+		<aware_of_module>org.openmrs.module.metadatadeploy</aware_of_module>
 		<aware_of_module>org.openmrs.module.webservices.rest</aware_of_module>
 		<aware_of_module>org.openmrs.module.stockmanagement</aware_of_module>
 		<aware_of_module>org.openmrs.module.kenyaemr.cashier</aware_of_module>
 		<aware_of_module>org.openmrs.module.fhir2</aware_of_module>
-	</aware_of_modules>
+	</aware_of_modules> -->
 	
 	<advice>
 		<point>org.openmrs.api.PatientService</point>
@@ -124,6 +124,12 @@
 		<description>wonder health integration auth token</description>
 		<defaultValue></defaultValue>
 	</globalProperty>
+
+	<!-- Maps hibernate file's, if present -->
+	<mappingFiles>
+		RMSQueue.hbm.xml
+		RMSQueueSystem.hbm.xml
+	</mappingFiles>
 
 	<!-- Internationalization -->
 	<!-- All message codes should start with @MODULE_ID@.* -->

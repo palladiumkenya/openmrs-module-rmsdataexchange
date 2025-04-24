@@ -9,32 +9,33 @@
  */
 package org.openmrs.module.rmsdataexchange.api;
 
-import java.util.List;
+import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
 
-import org.openmrs.annotation.Authorized;
-import org.openmrs.api.OpenmrsService;
+import org.hibernate.CacheMode;
+import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Restrictions;
+import org.hibernate.exception.DataException;
+import org.openmrs.api.db.DAOException;
+import org.openmrs.api.db.hibernate.DbSession;
+import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
-import org.openmrs.module.kenyaemr.cashier.api.util.PrivilegeConstants;
+import org.openmrs.module.kenyaemr.cashier.api.model.PaymentMode;
 import org.openmrs.module.rmsdataexchange.queue.model.RmsQueue;
 import org.openmrs.module.rmsdataexchange.queue.model.RmsQueueSystem;
-import org.springframework.transaction.annotation.Transactional;
-import org.openmrs.Patient;
-import org.openmrs.Person;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
 
-/**
- * The main service of this module, which is exposed for other modules. See
- * moduleApplicationContext.xml on how it is wired up.
- */
-public interface RmsdataexchangeService extends OpenmrsService {
+public interface RmsdataexchangeDao {
 	
-	@Transactional(readOnly = true)
-	@Authorized({ PrivilegeConstants.VIEW_BILLS })
+	void setSessionFactory(SessionFactory sessionFactory);
+	
+	SessionFactory getSessionFactory();
+	
 	Set<Payment> getPaymentsByBillId(Integer billId);
-	
-	@Transactional(readOnly = true)
-	org.hl7.fhir.r4.model.Patient convertPatientToFhirResource(Patient patient);
 	
 	List<RmsQueue> getQueueItems();
 	
@@ -49,10 +50,4 @@ public interface RmsdataexchangeService extends OpenmrsService {
 	RmsQueueSystem getQueueSystemByUUID(String queueSystemUUID);
 	
 	RmsQueueSystem getQueueSystemByID(Integer queueSystemID);
-	
-	// Boolean getBillAttribute(Bill bill, String attributeUUID);
-	
-	// Boolean getPaymentAttribute(Payment payment, String attributeUUID);
-	
-	// Boolean getPersonAttribute(Person person, String attributeUUID);
 }

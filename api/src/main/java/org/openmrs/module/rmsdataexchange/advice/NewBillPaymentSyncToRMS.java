@@ -258,8 +258,8 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 						// We send the payload to RMS
 						if (debugMode)
 							System.out
-							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill details. Token: "
-							                + token);
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill payment details. Payload: "
+							                + payload);
 						String finalUrl = baseURL + "/bill-payment";
 						if (debugMode)
 							System.out.println("rmsdataexchange Module: Final Create Payment URL: " + finalUrl);
@@ -327,8 +327,25 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 							
 						} else {
 							if (debugMode)
-								System.err.println("rmsdataexchange Module: Failed to send New Payment final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send New Payment to RMS: Error Code: "
 								        + finalResponseCode);
+							try {
+								// Use getErrorStream() to get the error message content
+								BufferedReader reader = new BufferedReader(
+								        new InputStreamReader(connection.getErrorStream()));
+								String line;
+								StringBuilder errorResponse = new StringBuilder();
+								while ((line = reader.readLine()) != null) {
+									errorResponse.append(line);
+								}
+								reader.close();
+								
+								// Output the error message/content
+								System.out
+								        .println("rmsdataexchange Module: Failed to send New Payment to RMS: Error Response: "
+								                + errorResponse.toString());
+							}
+							catch (Exception et) {}
 						}
 					}
 					catch (Exception em) {
@@ -341,13 +358,14 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 				}
 			} else {
 				if (debugMode)
-					System.err.println("rmsdataexchange Module: Failed to get auth: " + responseCode);
+					System.err.println("rmsdataexchange Module: Bill Payment Failed to get auth: " + responseCode);
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error. Bill Payment Failed to get auth token: "
+				        + ex.getMessage());
 			ex.printStackTrace();
 		}
 		
@@ -375,21 +393,79 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Start sending payment to RMS");
 				
+				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
+				
 				// If the patient doesnt exist, send the patient to RMS
 				if (debugMode)
 					System.out.println("RMS Sync RMSDataExchange Module Bill Payment: Send the patient first");
-				NewPatientRegistrationSyncToRMS.sendRMSPatientRegistration(payment.getBill().getPatient());
+				Boolean testPatientSending = NewPatientRegistrationSyncToRMS.sendRMSPatientRegistration(payment.getBill()
+				        .getPatient());
+				
+				if (testPatientSending) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending Patient to RMS");
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send Patient to RMS");
+				}
+				
+				sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
 				
 				// If the bill doesnt exist, send the bill to RMS
 				if (debugMode)
 					System.out.println("RMS Sync RMSDataExchange Module Bill Payment: Send the bill next");
-				NewBillCreationSyncToRMS.sendRMSNewBill(payment.getBill());
+				Boolean testBillSending = NewBillCreationSyncToRMS.sendRMSNewBill(payment.getBill());
+				
+				if (testBillSending) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending Bill to RMS");
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send Bill to RMS");
+				}
+				
+				sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
 				
 				// Now we can send the bill payment
-				sendRMSNewPayment(payment);
+				Boolean testPaymentSending = sendRMSNewPayment(payment);
 				
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Finished sending payment to RMS");
+				if (testPaymentSending) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Successfully Finished sending payment to RMS");
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send payment to RMS");
+				}
 			}
 			catch (Exception ex) {
 				if (debugMode)

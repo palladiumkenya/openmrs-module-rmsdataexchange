@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC 
+    "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+    "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+    <class name="org.openmrs.CashierPaymentAttribute" table="cashier_payment_attribute">
+        <id name="paymentAttributeId" type="java.lang.Integer">
+            <column name="payment_attribute_id" />
+            <generator class="native" />
+        </id>
+
+        <property name="billPaymentId" type="java.lang.Integer">
+            <column name="bill_payment_id" not-null="true" />
+        </property>
+
+        <property name="value" type="java.lang.String">
+            <column name="value" not-null="true" length="50" />
+        </property>
+
+        <property name="paymentAttributeTypeId" type="java.lang.Integer">
+            <column name="payment_attribute_type_id" not-null="true" />
+        </property>
+
+        <property name="creator" type="java.lang.Integer">
+            <column name="creator" not-null="true" />
+        </property>
+
+        <property name="dateCreated" type="java.util.Date">
+            <column name="date_created" not-null="true" />
+        </property>
+
+        <property name="changedBy" type="java.lang.Integer">
+            <column name="changed_by" />
+        </property>
+
+        <property name="dateChanged" type="java.util.Date">
+            <column name="date_changed" />
+        </property>
+
+        <property name="voided" type="java.lang.Boolean">
+            <column name="voided" not-null="true" />
+        </property>
+
+        <property name="voidedBy" type="java.lang.Integer">
+            <column name="voided_by" />
+        </property>
+
+        <property name="dateVoided" type="java.util.Date">
+            <column name="date_voided" />
+        </property>
+
+        <property name="voidReason" type="java.lang.String">
+            <column name="void_reason" length="255" />
+        </property>
+
+        <property name="uuid" type="java.lang.String">
+            <column name="uuid" not-null="true" length="38" />
+        </property>
+    </class>
+</hibernate-mapping>

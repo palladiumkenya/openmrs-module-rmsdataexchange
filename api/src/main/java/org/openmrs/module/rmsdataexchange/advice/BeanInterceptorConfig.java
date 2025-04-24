@@ -18,7 +18,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.interceptor.TransactionalProxy;
 import org.openmrs.module.rmsdataexchange.advice.NewBillPaymentSyncToRMS;
 
-@Component("rmsdataexchange.BeanInterceptorConfig")
 public class BeanInterceptorConfig implements BeanPostProcessor {
 	
 	// private Boolean processedBean = false;

@@ -223,8 +223,8 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 						// We send the payload to RMS
 						if (debugMode)
 							System.err
-							        .println("rmsdataexchange Module: We got the Auth token. Now sending the patient registration details. Token: "
-							                + token);
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the patient registration details. Payload: "
+							                + payload);
 						String finalUrl = baseURL + "/create-patient-profile";
 						if (debugMode)
 							System.out.println("rmsdataexchange Module: Final patient registration URL: " + finalUrl);
@@ -294,8 +294,25 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 							
 						} else {
 							if (debugMode)
-								System.err.println("rmsdataexchange Module: Failed to send final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send patient to RMS: Error Code: "
 								        + finalResponseCode);
+							try {
+								// Use getErrorStream() to get the error message content
+								BufferedReader reader = new BufferedReader(
+								        new InputStreamReader(connection.getErrorStream()));
+								String line;
+								StringBuilder errorResponse = new StringBuilder();
+								while ((line = reader.readLine()) != null) {
+									errorResponse.append(line);
+								}
+								reader.close();
+								
+								// Output the error message/content
+								System.out
+								        .println("rmsdataexchange Module: Failed to send New Patient to RMS: Error Response: "
+								                + errorResponse.toString());
+							}
+							catch (Exception et) {}
 						}
 					}
 					catch (Exception em) {
@@ -378,10 +395,27 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Start sending patient to RMS");
 				
-				sendRMSPatientRegistration(patient);
+				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
 				
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Finished sending patient to RMS");
+				Boolean testPatientSending = sendRMSPatientRegistration(patient);
+				
+				if (testPatientSending) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending patient to RMS");
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send patient to RMS");
+				}
 			}
 			catch (Exception ex) {
 				if (debugMode)
