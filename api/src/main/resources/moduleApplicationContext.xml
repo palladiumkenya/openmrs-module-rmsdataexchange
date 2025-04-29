@@ -25,7 +25,7 @@
 
     <context:annotation-config/>
     
-    <context:component-scan base-package="org.openmrs.module.rmsdataexchange"/>
+
 
     <bean id="patientTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.PatientTranslatorImpl" />
 
@@ -45,7 +45,14 @@
         </property>
         <property name="target">
             <bean class="org.openmrs.module.rmsdataexchange.api.impl.RmsdataexchangeServiceImpl">
-                <property name="dao" ref="rmsdataexchange.RmsdataexchangeDao" />
+                <property name="dao" >
+					<bean class="org.openmrs.module.rmsdataexchange.api.dao.RmsdataexchangeDao" >
+						<property name="sessionFactory">
+						<ref bean="sessionFactory" />
+						</property>
+					 </bean>				
+				</property>
+				
                 <property name="patientTranslator" ref="patientTranslatorImpl"/>
             </bean>
         </property>

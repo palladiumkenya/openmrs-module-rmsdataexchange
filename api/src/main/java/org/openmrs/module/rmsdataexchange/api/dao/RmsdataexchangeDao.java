@@ -15,30 +15,31 @@ import java.util.Set;
 import java.util.List;
 
 import org.hibernate.CacheMode;
-import org.hibernate.criterion.Restrictions;
+import org.hibernate.SessionFactory;
 import org.openmrs.api.db.hibernate.DbSession;
-import org.openmrs.api.db.hibernate.DbSessionFactory;
 import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.kenyaemr.cashier.api.model.PaymentMode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
 
-@Repository("rmsdataexchange.RmsdataexchangeDao")
 public class RmsdataexchangeDao {
 	
-	@Autowired
-	DbSessionFactory sessionFactory;
+	private SessionFactory sessionFactory;
 	
-	private DbSession getSession() {
-		return sessionFactory.getCurrentSession();
+	private SessionFactory getSessionFactory() {
+		return sessionFactory;
+	}
+	
+	public void setSessionFactory(SessionFactory sessionFactory) {
+		this.sessionFactory = sessionFactory;
 	}
 	
 	// @Override
 	@SuppressWarnings("unchecked")
 	public Set<Payment> getPaymentsByBillId(Integer billId) {
 		// Get the current Hibernate session from DbSessionFactory
-        DbSession session = getSession();
+        //DbSession session = getSession();
+		DbSession session = (DbSession) sessionFactory.getCurrentSession();
+		
         
         // Ensure no caching is used by ignoring the cache
         session.setCacheMode(CacheMode.IGNORE);
