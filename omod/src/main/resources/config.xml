@@ -30,11 +30,7 @@
 	</require_modules>
 
 	<aware_of_modules>
-		<!-- <aware_of_module>org.openmrs.module.metadatadeploy</aware_of_module> -->
-		<aware_of_module>org.openmrs.module.webservices.rest</aware_of_module>
-		<aware_of_module>org.openmrs.module.stockmanagement</aware_of_module>
-		<aware_of_module>org.openmrs.module.kenyaemr.cashier</aware_of_module>
-		<aware_of_module>org.openmrs.module.fhir2</aware_of_module>
+		
 	</aware_of_modules>
 	
 	<advice>
