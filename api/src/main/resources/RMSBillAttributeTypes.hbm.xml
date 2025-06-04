@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC 
+    "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+    "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping package="org.openmrs.module.rmsdataexchange.queue.model">
+    <class name="org.openmrs.module.rmsdataexchange.queue.model.RMSBillAttributeType" table="rms_bill_attribute_type">
+        <id name="billAttributeTypeId" type="java.lang.Integer">
+            <column name="bill_attribute_type_id" />
+            <generator class="native" />
+        </id>
+
+        <property name="name" type="java.lang.String">
+            <column name="name" not-null="true" length="50" />
+        </property>
+
+        <property name="description" type="java.lang.String">
+            <column name="description" />
+        </property>
+
+        <property name="format" type="java.lang.String">
+            <column name="format" length="50" />
+        </property>
+
+        <property name="foreignKey" type="java.lang.Integer">
+            <column name="foreign_key" />
+        </property>
+
+        <property name="searchable" type="java.lang.Boolean">
+            <column name="searchable" not-null="true" />
+        </property>
+
+        <many-to-one name="creator" class="org.openmrs.User" not-null="true">
+            <column name="creator" />
+        </many-to-one>
+
+        <property name="dateCreated" type="java.util.Date">
+            <column name="date_created" not-null="true" />
+        </property>
+
+        <many-to-one name="changedBy" class="org.openmrs.User" column="changed_by"/>
+
+        <property name="dateChanged" type="java.util.Date">
+            <column name="date_changed" />
+        </property>
+
+        <property name="retired" type="java.lang.Boolean">
+            <column name="retired" not-null="true" />
+        </property>
+
+        <many-to-one name="retiredBy" class="org.openmrs.User" column="retired_by"/>
+
+        <property name="dateRetired" type="java.util.Date">
+            <column name="date_retired" />
+        </property>
+
+        <property name="retireReason" type="java.lang.String">
+            <column name="retire_reason" length="255" />
+        </property>
+
+        <property name="editPrivilege" type="java.lang.String">
+            <column name="edit_privilege" length="255" />
+        </property>
+
+        <property name="sortWeight" type="java.lang.Double">
+            <column name="sort_weight" />
+        </property>
+
+        <property name="uuid" type="java.lang.String">
+            <column name="uuid" not-null="true" length="38" />
+        </property>
+    </class>
+</hibernate-mapping>

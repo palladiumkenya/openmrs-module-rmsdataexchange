@@ -29,7 +29,6 @@ import org.openmrs.module.rmsdataexchange.advice.NewBillPaymentSyncToRMS;
 /**
  * Contains module's config.
  */
-@Component("rmsdataexchange.RmsdataexchangeConfig")
 public class RmsdataexchangeConfig {
 	
 	public final static String MODULE_PRIVILEGE = "Rmsdataexchange Privilege";

@@ -15,13 +15,20 @@ import javax.validation.constraints.NotNull;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.hibernate.Hibernate;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
+import org.openmrs.User;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.Daemon;
+import org.openmrs.module.rmsdataexchange.RmsdataexchangeActivator;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
+import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
 import org.openmrs.module.kenyaemr.cashier.util.Utils;
 import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.aop.AfterReturningAdvice;
 
@@ -43,29 +50,49 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 					
 					// Log patient info
 					if (patient != null) {
-						Date patientCreationDate = patient.getDateCreated();
-						if (debugMode)
-							System.out.println("rmsdataexchange Module: patient was created on: " + patientCreationDate);
 						
-						if (patientCreationDate != null && AdviceUtils.checkIfCreateModetOrEditMode(patientCreationDate)) {
-							// CREATE MODE
+						// Check if the patient has already been synced (using patient attribute)
+						String attrCheck = AdviceUtils.getPersonAttributeValueByTypeUuid(patient,
+						    RMSModuleConstants.PERSON_ATTRIBUTE_RMS_SYNCHRONIZED_UUID);
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: RMS: Attribute check is: " + attrCheck);
+						if (attrCheck == null || attrCheck.trim().equalsIgnoreCase("0") || attrCheck.isEmpty()
+						        || attrCheck.trim().equalsIgnoreCase("")) {
+							Date patientCreationDate = patient.getDateCreated();
 							if (debugMode)
-								System.out.println("rmsdataexchange Module: New patient registered:");
+								System.out.println("rmsdataexchange Module: RMS Patient Date Changed: "
+								        + patient.getDateChanged());
 							if (debugMode)
-								System.out.println("rmsdataexchange Module: Name: " + patient.getPersonName().getFullName());
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: DOB: " + patient.getBirthdate());
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: Age: " + patient.getAge());
+								System.out.println("rmsdataexchange Module: patient was created on: " + patientCreationDate);
 							
-							// Use a thread to send the data. This frees up the frontend to proceed
-							syncPatientRunnable runner = new syncPatientRunnable(patient);
-							Thread thread = new Thread(runner);
-							thread.start();
+							if (patientCreationDate != null && AdviceUtils.checkIfCreateModetOrEditMode(patientCreationDate)) {
+								// CREATE MODE
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: New patient registered:");
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: Name: "
+									        + patient.getPersonName().getFullName());
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: DOB: " + patient.getBirthdate());
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: Age: " + patient.getAge());
+								
+								// Use a thread to send the data. This frees up the frontend to proceed
+								Hibernate.initialize(patient.getIdentifiers());
+								Integer ids = patient.getIdentifiers().size();
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: patient identifiers: " + ids);
+								String payload = preparePatientRMSPayload(patient);
+								syncPatientRunnable runner = new syncPatientRunnable(payload, patient);
+								Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
+							} else {
+								// EDIT MODE
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: patient in edit mode. we ignore");
+							}
 						} else {
-							// EDIT MODE
 							if (debugMode)
-								System.out.println("rmsdataexchange Module: patient in edit mode. we ignore");
+								System.out.println("rmsdataexchange Module: RMS: Patient already sent to remote. we ignore");
 						}
 					} else {
 						if (debugMode)
@@ -89,11 +116,25 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 	 */
 	private static String preparePatientRMSPayload(@NotNull Patient patient) {
 		String ret = "";
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		
 		try {
-			Context.openSession();
-			Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
+			if (Context.isSessionOpen()) {
+				System.out.println("rmsdataexchange Module: We have an open session F");
+				Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			} else {
+				System.out.println("rmsdataexchange Module: Error: We have NO open session F");
+				Context.openSession();
+				Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			}
+			Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+			
 			if (patient != null) {
+				Hibernate.initialize(patient.getIdentifiers());
+				Integer ids = patient.getIdentifiers().size();
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: patient identifiers: " + ids);
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: New patient created: "
 					        + patient.getPersonName().getFullName() + ", Age: " + patient.getAge());
@@ -126,12 +167,13 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 			}
 		}
 		catch (Exception ex) {
+			Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (debugMode)
 				System.err.println("rmsdataexchange Module: Error getting new patient payload: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		finally {
-			Context.closeSession();
+			// Context.closeSession();
 		}
 		
 		return (ret);
@@ -140,17 +182,40 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 	/**
 	 * Send the patient registration payload to RMS
 	 * 
-	 * @param patient
+	 * @param Patient patient
 	 * @return
 	 */
 	public static Boolean sendRMSPatientRegistration(@NotNull Patient patient) {
+		return (sendRMSPatientRegistration(preparePatientRMSPayload(patient)));
+	}
+	
+	/**
+	 * Send the patient registration payload to RMS
+	 * 
+	 * @param String patient
+	 * @return
+	 */
+	public static Boolean sendRMSPatientRegistration(@NotNull String patient) {
 		Boolean ret = false;
-		String payload = preparePatientRMSPayload(patient);
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		String payload = patient;
+		Boolean debugMode = false;
 		
 		HttpsURLConnection con = null;
 		HttpsURLConnection connection = null;
 		try {
+			if (Context.isSessionOpen()) {
+				System.out.println("rmsdataexchange Module: We have an open session 3");
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			} else {
+				System.out.println("rmsdataexchange Module: Error: We have NO open session 3");
+				Context.openSession();
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			}
+			User current = Daemon.getDaemonThreadUser();
+			System.out.println("rmsdataexchange Module: Current user in session 3: "
+			        + (current != null ? current.getUsername() : ""));
+			
+			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (debugMode)
 				System.out.println("rmsdataexchange Module: using payload: " + payload);
 			
@@ -223,8 +288,8 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 						// We send the payload to RMS
 						if (debugMode)
 							System.err
-							        .println("rmsdataexchange Module: We got the Auth token. Now sending the patient registration details. Token: "
-							                + token);
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the patient registration details. Payload: "
+							                + payload);
 						String finalUrl = baseURL + "/create-patient-profile";
 						if (debugMode)
 							System.out.println("rmsdataexchange Module: Final patient registration URL: " + finalUrl);
@@ -294,8 +359,25 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 							
 						} else {
 							if (debugMode)
-								System.err.println("rmsdataexchange Module: Failed to send final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send patient to RMS: Error Code: "
 								        + finalResponseCode);
+							try {
+								// Use getErrorStream() to get the error message content
+								BufferedReader reader = new BufferedReader(
+								        new InputStreamReader(connection.getErrorStream()));
+								String line;
+								StringBuilder errorResponse = new StringBuilder();
+								while ((line = reader.readLine()) != null) {
+									errorResponse.append(line);
+								}
+								reader.close();
+								
+								// Output the error message/content
+								System.out
+								        .println("rmsdataexchange Module: Failed to send New Patient to RMS: Error Response: "
+								                + errorResponse.toString());
+							}
+							catch (Exception et) {}
 						}
 					}
 					catch (Exception em) {
@@ -316,6 +398,9 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
 			ex.printStackTrace();
 		}
+		finally {
+			// Context.closeSession();
+		}
 		
 		return (ret);
 	}
@@ -329,11 +414,27 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 	 */
 	private static String getPatientIdentifier(Patient patient, PatientIdentifierType patientIdentifierType) {
 		String ret = "";
+		if (Context.isSessionOpen()) {
+			System.out.println("rmsdataexchange Module: We have an open session G");
+			Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+		} else {
+			System.out.println("rmsdataexchange Module: Error: We have NO open session G");
+			Context.openSession();
+			Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
+			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+		}
 		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		Integer patId = patient.getId();
+		Patient localPatient = Context.getPatientService().getPatient(patId);
 		
-		if (patientIdentifierType != null && patient != null) {
+		Integer ids = localPatient.getIdentifiers().size();
+		if (debugMode)
+			System.out.println("rmsdataexchange Module: patient identifiers: " + ids);
+		
+		if (patientIdentifierType != null && localPatient != null) {
 			try {
-				Set<PatientIdentifier> identifiers = patient.getIdentifiers();
+				Set<PatientIdentifier> identifiers = localPatient.getIdentifiers();
 				
 				for (PatientIdentifier patientIdentifier : identifiers) {
 					if (!patientIdentifier.getVoided()
@@ -349,7 +450,7 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("rmsdataexchange Module: Getting the identifier: " + ex.getMessage());
+					System.err.println("rmsdataexchange Module: Error Getting the identifier: " + ex.getMessage());
 				ex.printStackTrace();
 			}
 		}
@@ -362,11 +463,14 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 	 */
 	private class syncPatientRunnable implements Runnable {
 		
-		Patient patient = new Patient();
+		String payload = "";
 		
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		Patient patient = null;
 		
-		public syncPatientRunnable(@NotNull Patient patient) {
+		Boolean debugMode = false;
+		
+		public syncPatientRunnable(@NotNull String payload, @NotNull Patient patient) {
+			this.payload = payload;
 			this.patient = patient;
 		}
 		
@@ -375,13 +479,65 @@ public class NewPatientRegistrationSyncToRMS implements AfterReturningAdvice {
 			// Run the thread
 			
 			try {
+				if (Context.isSessionOpen()) {
+					System.out.println("rmsdataexchange Module: We have an open session H");
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+				} else {
+					System.out.println("rmsdataexchange Module: Error: We have NO open session H");
+					Context.openSession();
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+				}
+				debugMode = AdviceUtils.isRMSLoggingEnabled();
+				
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Start sending patient to RMS");
 				
-				sendRMSPatientRegistration(patient);
+				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
 				
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Finished sending patient to RMS");
+				Boolean testPatientSending = sendRMSPatientRegistration(payload);
+				
+				if (!testPatientSending) {
+					
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send patient to RMS");
+					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+					RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
+					        .getQueueSystemByUUID(RMSModuleConstants.RMS_SYSTEM_PATIENT);
+					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
+					if (addToQueue) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Finished adding patient to RMS Patient Queue");
+						// Mark sent using person attribute
+						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+						    RMSModuleConstants.PERSON_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "1");
+					} else {
+						if (debugMode)
+							System.err.println("rmsdataexchange Module: Error: Failed to add patient to RMS Patient Queue");
+						// Mark NOT sent using person attribute
+						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+						    RMSModuleConstants.PERSON_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "0");
+					}
+				} else {
+					// Success sending the patient
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending patient to RMS");
+					
+					// Mark sent using person attribute
+					AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+					    RMSModuleConstants.PERSON_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "1");
+				}
 			}
 			catch (Exception ex) {
 				if (debugMode)

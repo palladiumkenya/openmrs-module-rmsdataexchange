@@ -8,33 +8,12 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Set;
-import java.util.List;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.StringWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Set;
+import java.util.UUID;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -42,72 +21,51 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.hl7.fhir.r4.model.Address;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
+import org.hl7.fhir.r4.model.Extension;
+import org.hl7.fhir.r4.model.HumanName;
+import org.hl7.fhir.r4.model.Identifier;
+import org.hl7.fhir.r4.model.Meta;
+import org.hl7.fhir.r4.model.Reference;
+import org.openmrs.Location;
 import org.openmrs.Patient;
-import org.openmrs.Visit;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
 import org.openmrs.Person;
-import org.openmrs.PersonName;
-import org.openmrs.api.context.Context;
-import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
-import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
-import org.openmrs.module.kenyaemr.cashier.util.Utils;
-import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
-import org.openmrs.util.PrivilegeConstants;
-import org.springframework.aop.AfterReturningAdvice;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import ca.uhn.fhir.context.FhirContext;
-
-import org.openmrs.api.VisitService;
-import org.openmrs.module.fhir2.api.FhirPatientService;
-import org.openmrs.module.fhir2.api.translators.PatientTranslator;
-import org.openmrs.module.fhir2.api.translators.PractitionerTranslator;
-import org.openmrs.module.fhir2.api.translators.LocationTranslator;
-import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
-import org.openmrs.module.kenyaemr.cashier.util.Utils;
-import org.openmrs.PersonName;
-import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.HumanName;
-import java.util.UUID;
-
-import org.openmrs.Patient;
-import org.openmrs.Location;
-import org.openmrs.PersonName;
 import org.openmrs.PersonAddress;
-import org.openmrs.PatientIdentifier;
-import org.openmrs.api.context.Context;
-import ca.uhn.fhir.context.FhirContext;
-import org.hl7.fhir.r4.model.HumanName;
-import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
-import org.hl7.fhir.r4.model.Meta;
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Address;
-import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.DateType;
-import org.hl7.fhir.r4.model.Bundle;
-import org.openmrs.module.fhir2.FhirConstants;
+import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
-import org.hl7.fhir.r4.model.Extension;
-import org.hl7.fhir.r4.model.Reference;
+import org.openmrs.Visit;
+import org.openmrs.VisitAttributeType;
+import org.openmrs.api.VisitService;
+import org.openmrs.api.context.Context;
+import org.openmrs.api.context.Daemon;
+import org.openmrs.module.fhir2.FhirConstants;
+import org.openmrs.module.fhir2.api.translators.LocationTranslator;
+import org.openmrs.module.fhir2.api.translators.PatientTranslator;
+import org.openmrs.module.kenyaemr.cashier.util.Utils;
+import org.openmrs.module.rmsdataexchange.RmsdataexchangeActivator;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
+import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
+import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
+import org.openmrs.util.PrivilegeConstants;
+import org.springframework.aop.AfterReturningAdvice;
+
+import ca.uhn.fhir.context.FhirContext;
 
 /**
  * Detects when a new visit has started and syncs patient data to Wonder Health
  */
-@Component("rmsdataexchange.NewPatientRegistrationSyncToWonderHealth")
 public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningAdvice {
 	
 	private Boolean debugMode = false;
@@ -140,56 +98,93 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (AdviceUtils.isWonderHealthIntegrationEnabled()) {
 				// Check if the method is "saveVisit"
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Wonder Health: Method: " + method.getName());
+				// if (debugMode)
+				// 	System.out.println("rmsdataexchange Module: Wonder Health: Method: " + method.getName());
+				
 				if (method.getName().equals("saveVisit") && args.length > 0 && args[0] instanceof Visit) {
 					
-					for (Object object : args) {
-						if (debugMode)
-							System.out.println("rmsdataexchange Module: Wonder Health: Object Type: "
-							        + object.getClass().getName());
-					}
+					// for (Object object : args) {
+					// 	if (debugMode)
+					// 		System.out.println("rmsdataexchange Module: Wonder Health: Object Type: "
+					// 		        + object.getClass().getName());
+					// }
 					
 					Visit visit = (Visit) args[0];
 					
 					// check visit info and only process new visits
 					if (visit != null && visit.getStopDatetime() == null) {
+						// Check if visit is already being/been processed (using user property) NB: When checking in a patient, a strange thing happens
+						// If you select to add to the queue, the method "saveVisit" is called twice. This fixes the anomourous behavior
+						String syncCheck = Context.getAuthenticatedUser().getUserProperty("visit-" + visit.getUuid());
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Visit End Date: " + visit.getStopDatetime());
-						Patient patient = visit.getPatient();
+							System.out.println("rmsdataexchange Module: Wonder Health: Sync check is: " + syncCheck);
 						
-						if (patient != null) {
-							// Check if male or female
-							if (patient.getGender().equalsIgnoreCase("F") || patient.getAge() <= 6) {
+						if (syncCheck == null || syncCheck.trim().equalsIgnoreCase("0") || syncCheck.isEmpty()
+						        || syncCheck.trim().equalsIgnoreCase("")) {
+							if (debugMode)
+								System.out
+								        .println("rmsdataexchange Module: Wonder Health: Visit not processed yet. Now processing");
+							Context.getAuthenticatedUser().setUserProperty("visit-" + visit.getUuid(), "1");
+							
+							// Check if the patient has already been synced (using patient attribute)
+							String attrCheck = AdviceUtils.getPersonAttributeValueByTypeUuid(visit.getPatient(),
+							    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID);
+							if (debugMode)
+								System.out
+								        .println("rmsdataexchange Module: Wonder Health: Attribute check is: " + attrCheck);
+							if (attrCheck == null || attrCheck.trim().equalsIgnoreCase("0") || attrCheck.isEmpty()
+							        || attrCheck.trim().equalsIgnoreCase("")) {
 								if (debugMode)
-									System.out.println("rmsdataexchange Module: New patient checked in");
+									System.out.println("rmsdataexchange Module: Visit End Date: " + visit.getStopDatetime());
 								if (debugMode)
-									System.out.println("rmsdataexchange Module: Patient Name: "
-									        + patient.getPersonName().getFullName());
+									System.out.println("rmsdataexchange Module: Visit UUID: " + visit.getUuid());
 								if (debugMode)
-									System.out.println("rmsdataexchange Module: Patient DOB: " + patient.getBirthdate());
-								if (debugMode)
-									System.out.println("rmsdataexchange Module: Patient Age: " + patient.getAge());
+									System.out.println("rmsdataexchange Module: Visit Date Changed: "
+									        + visit.getDateChanged());
+								Patient patient = visit.getPatient();
 								
-								String payload = preparePatientPayload(patient);
-								// Use a thread to send the data. This frees up the frontend to proceed
-								syncPatientRunnable runner = new syncPatientRunnable(payload);
-								Thread thread = new Thread(runner);
-								thread.start();
+								if (patient != null) {
+									// Check if male or female
+									if (patient.getGender().equalsIgnoreCase("F") || patient.getAge() <= 6) {
+										if (debugMode)
+											System.out.println("rmsdataexchange Module: New patient checked in");
+										if (debugMode)
+											System.out.println("rmsdataexchange Module: Patient Name: "
+											        + patient.getPersonName().getFullName());
+										if (debugMode)
+											System.out.println("rmsdataexchange Module: Patient DOB: "
+											        + patient.getBirthdate());
+										if (debugMode)
+											System.out.println("rmsdataexchange Module: Patient Age: " + patient.getAge());
+										
+										String payload = preparePatientPayload(patient);
+										// Use a thread to send the data. This frees up the frontend to proceed
+										syncPatientRunnable runner = new syncPatientRunnable(payload, patient);
+										Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
+									} else {
+										if (debugMode)
+											System.out
+											        .println("rmsdataexchange Module: Wonder Health: The patient is not female and not below 7 years old");
+									}
+								} else {
+									if (debugMode)
+										System.out
+										        .println("rmsdataexchange Module: Wonder Health: Error: No patient attached to the visit");
+								}
 							} else {
 								if (debugMode)
 									System.out
-									        .println("rmsdataexchange Module: Wonder Health: The patient is not female and not below 7 years old");
+									        .println("rmsdataexchange Module: Wonder Health: Patient already sent to remote. We ignore.");
 							}
 						} else {
 							if (debugMode)
 								System.out
-								        .println("rmsdataexchange Module: Wonder Health: Error: No patient attached to the visit");
+								        .println("rmsdataexchange Module: Wonder Health: Visit already processed. We ignore.");
 						}
 						
 					} else {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Wonder Health: Error: Not a new visit.");
+							System.out.println("rmsdataexchange Module: Wonder Health: Not a new visit. We ignore.");
 					}
 				}
 			}
@@ -209,15 +204,29 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	 */
 	private String preparePatientPayload(@NotNull Patient patient) {
 		String ret = "";
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		Boolean debugMode = false;
 		
 		try {
-			Context.openSession();
-			Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
-			Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIPS);
-			Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIP_TYPES);
-			Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
-			Context.addProxyPrivilege(PrivilegeConstants.GET_PERSONS);
+			if (Context.isSessionOpen()) {
+				System.out.println("rmsdataexchange Module: We have an open session J");
+				Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIPS);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIP_TYPES);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_PERSONS);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			} else {
+				System.out.println("rmsdataexchange Module: Error: We have NO open session J");
+				Context.openSession();
+				Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIPS);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIP_TYPES);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_PATIENTS);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_PERSONS);
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			}
+			debugMode = AdviceUtils.isRMSLoggingEnabled();
+			
 			if (patient != null) {
 				// Create a new FHIR bundle
 				Bundle bundle = new Bundle();
@@ -464,7 +473,7 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 			ex.printStackTrace();
 		}
 		finally {
-			Context.closeSession();
+			// Context.closeSession();
 		}
 		
 		return (ret);
@@ -476,14 +485,23 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	 * @param patient
 	 * @return
 	 */
-	private Boolean sendWonderHealthPatientRegistration(@NotNull String patient) {
+	public static Boolean sendWonderHealthPatientRegistration(@NotNull String patient) {
 		Boolean ret = false;
 		String payload = patient;
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		Boolean debugMode = false;
 		
 		// HttpsURLConnection con = null;
 		HttpURLConnection connection = null;
 		try {
+			if (Context.isSessionOpen()) {
+				System.out.println("rmsdataexchange Module: We have an open session K");
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			} else {
+				System.out.println("rmsdataexchange Module: Error: We have NO open session K");
+				Context.openSession();
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			}
+			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (debugMode)
 				System.out.println("rmsdataexchange Module: Wonder Health using payload: " + payload);
 			
@@ -599,6 +617,9 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 				        + ex.getMessage());
 			ex.printStackTrace();
 		}
+		finally {
+			// Context.closeSession();
+		}
 		
 		return (ret);
 	}
@@ -645,31 +666,91 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 	 */
 	private class syncPatientRunnable implements Runnable {
 		
-		String patient = "";
+		String payload = "";
 		
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		Patient patient = null;
 		
-		public syncPatientRunnable(@NotNull String patient) {
+		Boolean debugMode = false;
+		
+		public syncPatientRunnable(@NotNull String payload, @NotNull Patient patient) {
+			this.payload = payload;
 			this.patient = patient;
 		}
 		
 		@Override
 		public void run() {
-			// Run the thread
 			
 			try {
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Start sending patient to RMS");
+				if (Context.isSessionOpen()) {
+					System.out.println("rmsdataexchange Module: We have an open session L");
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+				} else {
+					System.out.println("rmsdataexchange Module: Error: We have NO open session L");
+					Context.openSession();
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+				}
+				debugMode = AdviceUtils.isRMSLoggingEnabled();
 				
-				sendWonderHealthPatientRegistration(patient);
-				
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: Finished sending patient to RMS");
+					System.out.println("rmsdataexchange Module: Start sending patient to Wonder Health");
+				
+				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
+				
+				Boolean sendWonderHealthResult = sendWonderHealthPatientRegistration(payload);
+				
+				if (sendWonderHealthResult == false) {
+					// Failed to send the payload. We put it in the queue
+					if (debugMode)
+						System.err
+						        .println("rmsdataexchange Module: Failed to send patient to Wonder Health. Adding to queue");
+					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+					RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
+					        .getQueueSystemByUUID(RMSModuleConstants.WONDER_HEALTH_SYSTEM_PATIENT);
+					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
+					if (addToQueue) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Finished adding patient to Wonder Health Queue");
+						// Mark sent using person attribute
+						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+						    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
+					} else {
+						if (debugMode)
+							System.err
+							        .println("rmsdataexchange Module: Error: Failed to add patient to Wonder Health Queue");
+						// Mark NOT sent using person attribute
+						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+						    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "0");
+					}
+				} else {
+					// Success sending the patient
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending patient to Wonder Health");
+					// Mark sent using person attribute
+					AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+					    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
+				}
+				
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("rmsdataexchange Module: Error. Failed to send patient to RMS: " + ex.getMessage());
+					System.err.println("rmsdataexchange Module: Error. Failed to send patient to Wonder Health: "
+					        + ex.getMessage());
 				ex.printStackTrace();
+			}
+			finally {
+				// Context.closeSession();
 			}
 		}
 	}

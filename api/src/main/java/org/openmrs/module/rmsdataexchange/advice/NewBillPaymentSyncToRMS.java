@@ -15,13 +15,28 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.openmrs.Patient;
+import org.openmrs.User;
+import org.openmrs.api.context.AuthenticationScheme;
+import org.openmrs.api.context.Context;
+import org.openmrs.module.DaemonToken;
+import org.openmrs.module.DaemonTokenAware;
+import org.openmrs.module.Module;
+import org.openmrs.module.ModuleFactory;
 import org.openmrs.module.kenyaemr.cashier.api.IBillService;
 import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.kenyaemr.cashier.api.model.PaymentMode;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
+import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
 import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
+import org.openmrs.util.PrivilegeConstants;
+import org.openmrs.module.rmsdataexchange.RmsdataexchangeActivator;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
+import org.openmrs.api.context.Daemon;
+import org.openmrs.api.context.UserContext;
+import org.openmrs.api.context.Credentials;
 
 /**
  * Detects when a new payment has been made to a bill and syncs to RMS Financial System
@@ -85,10 +100,18 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 								if(debugMode) System.out.println("rmsdataexchange Module: New bill payments made: " + payments.size());
 
 								for(Payment payment : payments) {
-									// Use a thread to send the data. This frees up the frontend to proceed
-									syncPaymentRunnable runner = new syncPaymentRunnable(payment);
-									Thread thread = new Thread(runner);
-									thread.start();
+									// Check if the patient has already been synced (using patient attribute)
+									String attrCheck = AdviceUtils.getPaymentAttributeValueByTypeUuid(payment, RMSModuleConstants.PAYMENT_ATTRIBUTE_RMS_SYNCHRONIZED_UUID);
+									if (attrCheck == null || attrCheck == "0" || attrCheck.isEmpty()
+											|| attrCheck.trim().equalsIgnoreCase("")) {
+										// Use a thread to send the data. This frees up the frontend to proceed
+										String payload = prepareBillPaymentRMSPayload(payment);
+										syncPaymentRunnable runner = new syncPaymentRunnable(payment, payload);
+										Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
+									} else {
+										if (debugMode)
+											System.out.println("rmsdataexchange Module: RMS: Error: Payment already sent to remote");
+									}
 								}
 							}
 						}
@@ -133,10 +156,18 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 				System.out.println("rmsdataexchange Module: New bill payments made: " + payments.size());
 			
 			for (Payment payment : payments) {
-				// Use a thread to send the data. This frees up the frontend to proceed
-				syncPaymentRunnable runner = new syncPaymentRunnable(payment);
-				Thread thread = new Thread(runner);
-				thread.start();
+				// Check if the patient has already been synced (using patient attribute)
+				String attrCheck = AdviceUtils.getPaymentAttributeValueByTypeUuid(payment,
+				    RMSModuleConstants.PAYMENT_ATTRIBUTE_RMS_SYNCHRONIZED_UUID);
+				if (attrCheck == null || attrCheck == "0" || attrCheck.isEmpty() || attrCheck.trim().equalsIgnoreCase("")) {
+					// Use a thread to send the data. This frees up the frontend to proceed
+					String payload = prepareBillPaymentRMSPayload(payment);
+					syncPaymentRunnable runner = new syncPaymentRunnable(payment, payload);
+					Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: RMS: Error: Payment already sent to remote");
+				}
 			}
 		}
 	}
@@ -149,43 +180,84 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 	 */
 	public static String prepareBillPaymentRMSPayload(@NotNull Payment payment) {
 		String ret = "";
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 		
-		if (payment != null) {
-			if (debugMode)
-				System.out.println("rmsdataexchange Module: New bill payment created: UUID: " + payment.getUuid()
-				        + ", Amount Tendered: " + payment.getAmountTendered());
-			SimpleObject payloadPrep = new SimpleObject();
-			payloadPrep.put("bill_reference", payment.getBill().getUuid());
-			payloadPrep.put("amount_paid", payment.getAmountTendered());
-			PaymentMode paymentMode = payment.getInstanceType();
-			payloadPrep.put("payment_method_id", paymentMode != null ? paymentMode.getId() : 1);
+		try {
+			if (Context.isSessionOpen()) {
+				System.out.println("rmsdataexchange Module: We have an open session D");
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			} else {
+				System.out.println("rmsdataexchange Module: Error: We have NO open session D");
+				Context.openSession();
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			}
+			Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
 			
-			ret = payloadPrep.toJson();
-			if (debugMode)
-				System.out.println("rmsdataexchange Module: Got payment details: " + ret);
-		} else {
-			if (debugMode)
-				System.out.println("rmsdataexchange Module: payment is null");
+			if (payment != null) {
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: New bill payment created: UUID: " + payment.getUuid()
+					        + ", Amount Tendered: " + payment.getAmountTendered());
+				SimpleObject payloadPrep = new SimpleObject();
+				payloadPrep.put("bill_reference", payment.getBill().getUuid());
+				payloadPrep.put("amount_paid", payment.getAmountTendered());
+				PaymentMode paymentMode = payment.getInstanceType();
+				payloadPrep.put("payment_method_id", paymentMode != null ? paymentMode.getId() : 1);
+				
+				ret = payloadPrep.toJson();
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: Got payment details: " + ret);
+			} else {
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: payment is null");
+			}
+			
 		}
+		catch (Exception ex) {
+			Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+			if (debugMode)
+				System.err.println("rmsdataexchange Module: Error getting new bill payment payload: " + ex.getMessage());
+			ex.printStackTrace();
+		}
+		finally {
+			// Context.closeSession();
+		}
+		
 		return (ret);
 	}
 	
 	/**
 	 * Send the new payment payload to RMS
 	 * 
-	 * @param patient
+	 * @param Payment payment
 	 * @return
 	 */
 	public static Boolean sendRMSNewPayment(@NotNull Payment payment) {
+		return sendRMSNewPayment(prepareBillPaymentRMSPayload(payment));
+	}
+	
+	/**
+	 * Send the new payment payload to RMS
+	 * 
+	 * @param String payment
+	 * @return
+	 */
+	public static Boolean sendRMSNewPayment(@NotNull String payment) {
 		Boolean ret = false;
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		Boolean debugMode = false;
 		
-		String payload = prepareBillPaymentRMSPayload(payment);
+		String payload = payment;
 		
 		HttpsURLConnection con = null;
 		HttpsURLConnection connection = null;
 		try {
+			if (Context.isSessionOpen()) {
+				System.out.println("rmsdataexchange Module: We have an open session E");
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			} else {
+				System.out.println("rmsdataexchange Module: Error: We have NO open session E");
+				Context.openSession();
+				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+			}
+			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (debugMode)
 				System.out.println("rmsdataexchange Module: using payment payload: " + payload);
 			
@@ -258,8 +330,8 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 						// We send the payload to RMS
 						if (debugMode)
 							System.out
-							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill details. Token: "
-							                + token);
+							        .println("rmsdataexchange Module: We got the Auth token. Now sending the new bill payment details. Payload: "
+							                + payload);
 						String finalUrl = baseURL + "/bill-payment";
 						if (debugMode)
 							System.out.println("rmsdataexchange Module: Final Create Payment URL: " + finalUrl);
@@ -327,8 +399,25 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 							
 						} else {
 							if (debugMode)
-								System.err.println("rmsdataexchange Module: Failed to send New Payment final payload: "
+								System.err.println("rmsdataexchange Module: Failed to send New Payment to RMS: Error Code: "
 								        + finalResponseCode);
+							try {
+								// Use getErrorStream() to get the error message content
+								BufferedReader reader = new BufferedReader(
+								        new InputStreamReader(connection.getErrorStream()));
+								String line;
+								StringBuilder errorResponse = new StringBuilder();
+								while ((line = reader.readLine()) != null) {
+									errorResponse.append(line);
+								}
+								reader.close();
+								
+								// Output the error message/content
+								System.out
+								        .println("rmsdataexchange Module: Failed to send New Payment to RMS: Error Response: "
+								                + errorResponse.toString());
+							}
+							catch (Exception et) {}
 						}
 					}
 					catch (Exception em) {
@@ -341,14 +430,18 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 				}
 			} else {
 				if (debugMode)
-					System.err.println("rmsdataexchange Module: Failed to get auth: " + responseCode);
+					System.err.println("rmsdataexchange Module: Bill Payment Failed to get auth: " + responseCode);
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("rmsdataexchange Module: Error. Failed to get auth token: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error. Bill Payment Failed to get auth token: "
+				        + ex.getMessage());
 			ex.printStackTrace();
+		}
+		finally {
+			// Context.closeSession();
 		}
 		
 		return (ret);
@@ -361,10 +454,13 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 		
 		Payment payment = new Payment();
 		
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		String payload = "";
 		
-		public syncPaymentRunnable(@NotNull Payment payment) {
+		Boolean debugMode = false;
+		
+		public syncPaymentRunnable(@NotNull Payment payment, @NotNull String payload) {
 			this.payment = payment;
+			this.payload = payload;
 		}
 		
 		@Override
@@ -372,24 +468,179 @@ public class NewBillPaymentSyncToRMS implements MethodInterceptor {
 			// Run the thread
 			
 			try {
+				if (Daemon.isDaemonThread()) {
+					System.out.println("rmsdataexchange Module: This is a daemon thread");
+				} else {
+					System.out.println("rmsdataexchange Module: This is NOT a daemon thread");
+				}
+				if (Context.isSessionOpen()) {
+					System.out.println("rmsdataexchange Module: We have an open session 1");
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+				} else {
+					System.out.println("rmsdataexchange Module: Error: We have NO open session 1");
+					Context.openSession();
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+				}
+				User current = Daemon.getDaemonThreadUser();
+				System.out.println("rmsdataexchange Module: Current user in session 1: "
+				        + (current != null ? current.getUsername() : ""));
+				if (!Context.isAuthenticated()) {
+					System.out.println("rmsdataexchange Module: context is NOT authenticated 1");
+				} else {
+					System.out.println("rmsdataexchange Module: context is authenticated 1");
+				}
+				
+				debugMode = AdviceUtils.isRMSLoggingEnabled();
+				
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Start sending payment to RMS");
 				
+				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
+				
 				// If the patient doesnt exist, send the patient to RMS
 				if (debugMode)
-					System.out.println("RMS Sync RMSDataExchange Module Bill Payment: Send the patient first");
-				NewPatientRegistrationSyncToRMS.sendRMSPatientRegistration(payment.getBill().getPatient());
+					System.out
+					        .println("rmsdataexchange Module: RMS Sync RMSDataExchange Module Bill Payment: Send the patient first");
+				Patient patient = payment.getBill().getPatient();
+				Boolean testPatientSending = NewPatientRegistrationSyncToRMS.sendRMSPatientRegistration(patient);
+				
+				if (!testPatientSending) {
+					
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send patient to RMS");
+					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+					RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
+					        .getQueueSystemByUUID(RMSModuleConstants.RMS_SYSTEM_PATIENT);
+					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
+					if (addToQueue) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Finished adding patient to RMS Patient Queue");
+						// Mark sent using person attribute
+						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+						    RMSModuleConstants.PERSON_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "1");
+					} else {
+						if (debugMode)
+							System.err.println("rmsdataexchange Module: Error: Failed to add patient to RMS Patient Queue");
+						// Mark NOT sent using person attribute
+						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+						    RMSModuleConstants.PERSON_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "0");
+					}
+				} else {
+					// Success sending the patient
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending patient to RMS");
+					
+					// Mark sent using person attribute
+					AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+					    RMSModuleConstants.PERSON_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "1");
+				}
+				
+				sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
 				
 				// If the bill doesnt exist, send the bill to RMS
 				if (debugMode)
 					System.out.println("RMS Sync RMSDataExchange Module Bill Payment: Send the bill next");
-				NewBillCreationSyncToRMS.sendRMSNewBill(payment.getBill());
+				Bill bill = payment.getBill();
+				Boolean testBillSending = NewBillCreationSyncToRMS.sendRMSNewBill(bill);
+				
+				if (testBillSending) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Finished sending Bill to RMS");
+					// Mark sent using bill attribute
+					AdviceUtils.setBillAttributeValueByTypeUuid(bill,
+					    RMSModuleConstants.BILL_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "1");
+				} else {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send Bill to RMS");
+					
+					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+					RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
+					        .getQueueSystemByUUID(RMSModuleConstants.RMS_SYSTEM_BILL);
+					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
+					if (addToQueue) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Finished adding bill to RMS Bill Queue");
+						// Mark NOT sent using bill attribute
+						AdviceUtils.setBillAttributeValueByTypeUuid(bill,
+						    RMSModuleConstants.BILL_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "1");
+					} else {
+						if (debugMode)
+							System.err.println("rmsdataexchange Module: Error: Failed to add bill to RMS Bill Queue");
+						// Mark NOT sent using bill attribute
+						AdviceUtils.setBillAttributeValueByTypeUuid(bill,
+						    RMSModuleConstants.BILL_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "0");
+					}
+				}
+				
+				sleepTime = AdviceUtils.getRandomInt(5000, 10000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
 				
 				// Now we can send the bill payment
-				sendRMSNewPayment(payment);
+				Boolean testPaymentSending = sendRMSNewPayment(payment);
 				
-				if (debugMode)
-					System.out.println("rmsdataexchange Module: Finished sending payment to RMS");
+				// TODO: For now we disable setting payment attributes because of how cashier module handles partial payments i.e
+				// instead of updating previous payments, it deletes them (deleting id and uuid) and creates new ones this would conflict with attributes
+				if (testPaymentSending) {
+					// Success sending the payment
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Successfully Finished sending payment to RMS");
+					
+					// Mark sent using payment attribute
+					// AdviceUtils.setPaymentAttributeValueByTypeUuid(payment,
+					//     RMSModuleConstants.PAYMENT_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "1");
+				} else {
+					
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Failed to send payment to RMS");
+					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+					RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
+					        .getQueueSystemByUUID(RMSModuleConstants.RMS_SYSTEM_PAYMENT);
+					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
+					if (addToQueue) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Finished adding payment to RMS payment Queue");
+						// Mark sent using payment attribute
+						// AdviceUtils.setPaymentAttributeValueByTypeUuid(payment,
+						//     RMSModuleConstants.PAYMENT_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "1");
+					} else {
+						if (debugMode)
+							System.err.println("rmsdataexchange Module: Error: Failed to add payment to RMS payment Queue");
+						// Mark NOT sent using payment attribute
+						// AdviceUtils.setPaymentAttributeValueByTypeUuid(payment,
+						//     RMSModuleConstants.PAYMENT_ATTRIBUTE_RMS_SYNCHRONIZED_UUID, "0");
+					}
+				}
 			}
 			catch (Exception ex) {
 				if (debugMode)

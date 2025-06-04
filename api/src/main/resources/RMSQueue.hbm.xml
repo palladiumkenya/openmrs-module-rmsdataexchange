@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd" >
+
+<hibernate-mapping package="org.openmrs.module.rmsdataexchange.queue.model">
+
+    <class name="org.openmrs.module.rmsdataexchange.queue.model.RMSQueue" table="rms_queue">
+        <id name="id" type="int" column="id" unsaved-value="0">
+            <generator class="native" />
+        </id>
+        <discriminator column="id" insert="false" />
+        <property name="payload" type ="java.lang.String" column ="payload" length="65535"/>
+        <many-to-one name="rmsSystem" class="org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem" column="rms_system" not-null="true"/>
+        <property name="retries" type="java.lang.Integer" column="retries"/>
+        <property name="uuid" type="java.lang.String" column="uuid" length="38" unique="true" />
+        <!-- bi-directional many-to-one association to User -->
+        <many-to-one name="creator" class="org.openmrs.User" not-null="true">
+            <column name="creator" />
+        </many-to-one>
+        <property name="dateCreated" type="java.util.Date" column="date_created" not-null="true" length="19" />
+        <property name="voided" type="java.lang.Boolean" column="voided" length="1"/>
+        <many-to-one name="voidedBy" class="org.openmrs.User" column="voided_by"/>
+        <property name="dateVoided" type ="java.util.Date" column ="date_voided" length="19"/>
+        <property name="voidReason" type="java.lang.String" column="voided_reason" length="255"/>
+        <property name="dateChanged" type="java.util.Date" column="date_changed" length="19"/>
+        <many-to-one name="changedBy" class="org.openmrs.User" column="changed_by"/>
+    </class>
+
+</hibernate-mapping>

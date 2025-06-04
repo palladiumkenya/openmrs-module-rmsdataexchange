@@ -10,7 +10,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>rmsdataexchange</artifactId>
-	<version>1.2.4</version>
+	<version>1.2.7</version>
 	<packaging>pom</packaging>
 	<name>RMS Data Exchange</name>
 	<description>RMS Data Exchange</description>
@@ -30,12 +30,12 @@
 
 	<properties>
 		<javaVersion>1.8</javaVersion>
-		<openmrsPlatformVersion>2.6.1</openmrsPlatformVersion>
+		<openmrsPlatformVersion>2.6.14</openmrsPlatformVersion>
 		<cashierVersion>4.2.2-SNAPSHOT</cashierVersion>
 		<stockManagementVersion>2.0.2-SNAPSHOT</stockManagementVersion>
-		<restWebServicesVersion>2.41.0</restWebServicesVersion>
+		<restWebServicesVersion>2.49.0-SNAPSHOT</restWebServicesVersion>
 		<!-- <metadatadeployVersion>1.12.1</metadatadeployVersion> -->
-		<fhir2Version>2.1.0</fhir2Version>
+		<fhir2Version>2.3.0</fhir2Version>
 	</properties>
 
 	<dependencyManagement>
