@@ -104,9 +104,9 @@ public class RMSModuleConstants {
 	public static final String hieCRUsernameGlobal = "rmsdataexchange.hiecr.integration.username";
 	
 	public static final String hieCRPasswordGlobal = "rmsdataexchange.hiecr.integration.password";
-
+	
 	public static final String NATIONAL_ID = "49af6cdc-7968-4abb-bf46-de10d7f4859f";
-
+	
 	public static final String NATIONAL_UNIQUE_PATIENT_IDENTIFIER = "f85081e2-b4be-4e48-b3a4-7994b69bb101";
 	
 	protected RMSModuleConstants() {

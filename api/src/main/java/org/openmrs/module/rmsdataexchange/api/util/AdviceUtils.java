@@ -13,7 +13,10 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
+import org.hibernate.CacheMode;
 import org.hibernate.Hibernate;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.hl7.fhir.r4.model.Coding;
 import org.openmrs.Concept;
 import org.openmrs.ConceptNumeric;
@@ -713,13 +716,32 @@ public class AdviceUtils {
 	public static Obs getLatestObs(Patient patient, String conceptIdentifier) {
 		Concept concept = getConcept(conceptIdentifier);
 		if (concept != null) {
+			System.out.println("rmsdataexchange Module: HIE CR: Concept is not null: " + concept.getName().getName());
+			Context.flushSession();
+			Context.clearSession();
 			List<Obs> obs = Context.getObsService().getObservationsByPersonAndConcept(patient, concept);
 			if (obs.size() > 0) {
 				// these are in reverse chronological order
 				return obs.get(0);
+			} else {
+				System.out.println("rmsdataexchange Module: HIE CR: no obs found");
 			}
+		} else {
+			System.out.println("rmsdataexchange Module: HIE CR: Concept is null");
 		}
 		return null;
+	}
+	
+	/**
+	 * Get the value coded concept of the latest OBS
+	 * 
+	 * @param patient
+	 * @param conceptIdentifier
+	 * @return
+	 */
+	public static Concept getLatestObsConcept(Patient patient, String conceptIdentifier) {
+		RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+		return (rmsdataexchangeService.getLatestObsConcept(patient, conceptIdentifier));
 	}
 	
 	/**

@@ -3,115 +3,41 @@ package org.openmrs.module.rmsdataexchange.advice;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.PrintStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.validation.constraints.NotNull;
-
-import org.aopalliance.intercept.MethodInterceptor;
-import org.aopalliance.intercept.MethodInvocation;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.openmrs.Patient;
-import org.openmrs.User;
-import org.openmrs.api.context.AuthenticationScheme;
-import org.openmrs.api.context.Context;
-import org.openmrs.module.DaemonToken;
-import org.openmrs.module.DaemonTokenAware;
-import org.openmrs.module.Module;
-import org.openmrs.module.ModuleFactory;
-import org.openmrs.module.kenyaemr.cashier.api.IBillService;
-import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
-import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
-import org.openmrs.module.kenyaemr.cashier.api.model.PaymentMode;
-import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
-import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
-import org.openmrs.module.rmsdataexchange.api.util.SimpleObject;
-import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
-import org.openmrs.util.PrivilegeConstants;
-import org.springframework.aop.AfterReturningAdvice;
-import org.openmrs.module.rmsdataexchange.RmsdataexchangeActivator;
-import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
-import org.openmrs.api.context.Daemon;
-import org.openmrs.api.context.UserContext;
-import org.openmrs.api.context.Credentials;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import javax.validation.constraints.NotNull;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHeaders;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
 import org.hl7.fhir.r4.model.Address;
 import org.hl7.fhir.r4.model.BooleanType;
-import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.ContactPoint;
 import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
-import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Patient.ContactComponent;
 import org.hl7.fhir.r4.model.Reference;
 import org.openmrs.Concept;
-import org.openmrs.Diagnosis;
-import org.openmrs.Encounter;
 import org.openmrs.GlobalProperty;
-import org.openmrs.Location;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
-import org.openmrs.Person;
 import org.openmrs.PersonAddress;
 import org.openmrs.PersonAttribute;
 import org.openmrs.PersonAttributeType;
 import org.openmrs.PersonName;
-import org.openmrs.Provider;
-import org.openmrs.Relationship;
-import org.openmrs.RelationshipType;
-import org.openmrs.Visit;
-import org.openmrs.VisitAttributeType;
-import org.openmrs.api.DiagnosisService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.PersonService;
-import org.openmrs.api.ProviderService;
-import org.openmrs.api.VisitService;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.context.Daemon;
-import org.openmrs.module.fhir2.FhirConstants;
-import org.openmrs.module.fhir2.api.translators.LocationTranslator;
-import org.openmrs.module.fhir2.api.translators.PatientTranslator;
-import org.openmrs.util.PrivilegeConstants;
+import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
+import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
 import org.springframework.aop.AfterReturningAdvice;
 
 import ca.uhn.fhir.context.FhirContext;
@@ -198,8 +124,12 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 			outputStream.write(output, 0, output.length);
 			
 			int finalResponseCode = connection.getResponseCode();
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: HIE CR: Sending payload to CR: ResponseCode: "
+				        + finalResponseCode);
 			
-			if (finalResponseCode == HttpURLConnection.HTTP_OK) { //success
+			// if (finalResponseCode == HttpURLConnection.HTTP_OK || finalResponseCode == HttpURLConnection.HTTP_ACCEPTED || finalResponseCode == HttpURLConnection.HTTP_CREATED) { //success
+			if (finalResponseCode >= HttpURLConnection.HTTP_OK && finalResponseCode < HttpURLConnection.HTTP_MULT_CHOICE) {
 				reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 				StringBuilder response = new StringBuilder();
 				String responseLine = null;
@@ -241,7 +171,7 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 	 */
 	private String preparePatientFHIRPayload(Patient patient) {
 		String ret = "";
-        PatientService patientService = Context.getPatientService();
+		PatientService patientService = Context.getPatientService();
 		org.hl7.fhir.r4.model.Patient patientResource = new org.hl7.fhir.r4.model.Patient();
 		if (debugMode)
 			System.out.println("rmsdataexchange Module: HIE CR: Manually constructing the payload");
@@ -250,17 +180,19 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 		patientResource.setId(patient.getUuid());
 		
 		// Set Identifiers
-        PatientIdentifierType nationalIdPatientIdentifierType = patientService.getPatientIdentifierTypeByUuid(RMSModuleConstants.NATIONAL_ID);
-        PatientIdentifierType nupiPatientIdentifierType = patientService.getPatientIdentifierTypeByUuid(RMSModuleConstants.NATIONAL_UNIQUE_PATIENT_IDENTIFIER);
+		PatientIdentifierType nationalIdPatientIdentifierType = patientService
+		        .getPatientIdentifierTypeByUuid(RMSModuleConstants.NATIONAL_ID);
+		PatientIdentifierType nupiPatientIdentifierType = patientService
+		        .getPatientIdentifierTypeByUuid(RMSModuleConstants.NATIONAL_UNIQUE_PATIENT_IDENTIFIER);
 		for (PatientIdentifier identifier : patient.getActiveIdentifiers()) {
 			Identifier fhirIdentifier = new Identifier();
-            if(identifier.getIdentifierType().equals(nationalIdPatientIdentifierType)) {
-                fhirIdentifier.setSystem("https://hie.kisumu.go.ke/IdentifierSystem/NATIONAL-ID");
-            } else if(identifier.getIdentifierType().equals(nupiPatientIdentifierType)) {
-                fhirIdentifier.setSystem("https://hie.kisumu.go.ke/IdentifierSystem/KENYA-NATIONAL-UPI");
-            } else {
-			    fhirIdentifier.setSystem("http://fhir.openmrs.org/ext/patient/identifier#system");
-            }
+			if (identifier.getIdentifierType().equals(nationalIdPatientIdentifierType)) {
+				fhirIdentifier.setSystem("https://hie.kisumu.go.ke/IdentifierSystem/NATIONAL-ID");
+			} else if (identifier.getIdentifierType().equals(nupiPatientIdentifierType)) {
+				fhirIdentifier.setSystem("https://hie.kisumu.go.ke/IdentifierSystem/KENYA-NATIONAL-UPI");
+			} else {
+				fhirIdentifier.setSystem("http://fhir.openmrs.org/ext/patient/identifier#system");
+			}
 			fhirIdentifier.setValue(identifier.getIdentifier());
 			fhirIdentifier.setUse(Identifier.IdentifierUse.OFFICIAL);
 			patientResource.addIdentifier(fhirIdentifier);
@@ -311,12 +243,28 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 		Coding codingMaritalStatus = new Coding();
 		//marital status
 		Obs obsMaritalStatus = AdviceUtils.getLatestObs(patient, RMSModuleConstants.CIVIL_STATUS);
+		
 		if (obsMaritalStatus != null) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: HIE CR: Found marital status obs for this patient");
 			Concept conMaritalStatus = obsMaritalStatus.getValueCoded();
 			codingMaritalStatus = AdviceUtils.getMaritalStatusCoding(conMaritalStatus);
 			ccMaritalStatus.setCoding(Collections.singletonList(codingMaritalStatus));
 			
 			patientResource.setMaritalStatus(ccMaritalStatus);
+		} else {
+			Concept valMaritalStatus = AdviceUtils.getLatestObsConcept(patient, RMSModuleConstants.CIVIL_STATUS);
+			if (valMaritalStatus != null) {
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: HIE CR: Fallback to direct SQL to get latest Obs");
+				codingMaritalStatus = AdviceUtils.getMaritalStatusCoding(valMaritalStatus);
+				ccMaritalStatus.setCoding(Collections.singletonList(codingMaritalStatus));
+				
+				patientResource.setMaritalStatus(ccMaritalStatus);
+			} else {
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: HIE CR: There is no marital status obs for this patient");
+			}
 		}
 		
 		// telecom

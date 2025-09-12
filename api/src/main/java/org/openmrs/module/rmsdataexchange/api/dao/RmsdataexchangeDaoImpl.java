@@ -21,7 +21,11 @@ import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.DataException;
+import org.hibernate.query.NativeQuery;
+import org.openmrs.Concept;
+import org.openmrs.Patient;
 import org.openmrs.User;
+import org.openmrs.api.context.Context;
 import org.openmrs.api.db.DAOException;
 import org.openmrs.api.db.hibernate.DbSession;
 import org.openmrs.api.db.hibernate.DbSessionFactory;
@@ -29,6 +33,7 @@ import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.kenyaemr.cashier.api.model.PaymentMode;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeDao;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSBillAttribute;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSBillAttributeType;
@@ -36,9 +41,11 @@ import org.openmrs.module.rmsdataexchange.queue.model.RMSPaymentAttribute;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSPaymentAttributeType;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSQueue;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
+import org.openmrs.util.PrivilegeConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 import org.hibernate.Criteria;
+import org.hibernate.SQLQuery;
 
 public class RmsdataexchangeDaoImpl implements RmsdataexchangeDao {
 	
@@ -97,6 +104,87 @@ public class RmsdataexchangeDaoImpl implements RmsdataexchangeDao {
         }
 
 		return(payments);
+	}
+	
+	/**
+	 * Get the value coded concept of the latest OBS
+	 * 
+	 * @param patient
+	 * @param conceptIdentifier
+	 * @return
+	 */
+	@Override
+	@SuppressWarnings("unchecked")
+	public Concept getLatestObsConcept(Patient patient, String conceptIdentifier) {
+		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
+		Concept concept = AdviceUtils.getConcept(conceptIdentifier);
+		if (concept != null) {
+			// Get the current Hibernate session from DbSessionFactory
+			Session session = sessionFactory.getCurrentSession();
+			// Session session = sessionFactory.openSession();
+			
+			// Ensure no caching is used by ignoring the cache
+			session.setCacheMode(CacheMode.IGNORE);
+			
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: HIE CR: Direct SQL: Concept is not null: "
+				        + concept.getName().getName());
+			Context.addProxyPrivilege(PrivilegeConstants.SQL_LEVEL_ACCESS);
+			// SELECT obs_id, person_id, concept_id, value_coded FROM openmrs.obs where person_id=1355 and concept_id=1054 order by obs_id desc limit 1;
+			StringBuilder q = new StringBuilder();
+			q.append("SELECT obs_id, person_id, concept_id, value_coded FROM openmrs.obs where person_id = :patientId");
+			q.append(" and concept_id = :conceptId");
+			q.append(" order by obs_id desc limit 1;");
+			
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: HIE CR: Executing SQL query: " + q.toString());
+			
+			// RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+			// rmsdataexchangeService.getQueueItems();
+			Context.flushSession();
+			Context.clearSession();
+			// SessionFactory sf = Context.getRegisteredComponent("sessionFactory", SessionFactory.class);
+			// Session session = sf.getCurrentSession();
+			// Ensure no caching is used by ignoring the cache
+			// Execute the query and fetch the result
+			NativeQuery query = session.createSQLQuery(q.toString()).setParameter("patientId", patient.getId()).setParameter("conceptId", concept.getId());
+			query.setCacheable(false);
+			List<Object[]> resultList = query.list();
+			
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Latest Obs got SQL obs: " + resultList.size());
+			
+			if (resultList != null && !resultList.isEmpty()) {
+				System.out.println("rmsdataexchange Module: HIE CR: The latest obs was found");
+				Object[] latestObs = resultList.get(0);
+				Integer obs_id = (Integer) latestObs[0];
+				Integer person_id = (Integer) latestObs[1];
+				Integer concept_id = (Integer) latestObs[2];
+				Integer value_coded = (Integer) latestObs[3];
+				
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: HIE CR: obs_id is: " + obs_id);
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: HIE CR: person_id is: " + person_id);
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: HIE CR: concept_id is: " + concept_id);
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: HIE CR: value_coded is: " + value_coded);
+				
+				Concept valueCoded = Context.getConceptService().getConcept(value_coded);
+				return (valueCoded);
+			} else {
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: HIE CR: no obs found");
+			}
+			
+			Context.removeProxyPrivilege(PrivilegeConstants.SQL_LEVEL_ACCESS);
+			
+		} else {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: HIE CR: Concept is null");
+		}
+		return null;
 	}
 	
 	@Override
