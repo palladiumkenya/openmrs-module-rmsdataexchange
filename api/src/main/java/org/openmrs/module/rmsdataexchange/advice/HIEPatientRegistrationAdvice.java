@@ -102,6 +102,7 @@ import org.openmrs.RelationshipType;
 import org.openmrs.Visit;
 import org.openmrs.VisitAttributeType;
 import org.openmrs.api.DiagnosisService;
+import org.openmrs.api.PatientService;
 import org.openmrs.api.PersonService;
 import org.openmrs.api.ProviderService;
 import org.openmrs.api.VisitService;
@@ -240,6 +241,7 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 	 */
 	private String preparePatientFHIRPayload(Patient patient) {
 		String ret = "";
+        PatientService patientService = Context.getPatientService();
 		org.hl7.fhir.r4.model.Patient patientResource = new org.hl7.fhir.r4.model.Patient();
 		if (debugMode)
 			System.out.println("rmsdataexchange Module: HIE CR: Manually constructing the payload");
@@ -248,9 +250,17 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 		patientResource.setId(patient.getUuid());
 		
 		// Set Identifiers
+        PatientIdentifierType nationalIdPatientIdentifierType = patientService.getPatientIdentifierTypeByUuid(RMSModuleConstants.NATIONAL_ID);
+        PatientIdentifierType nupiPatientIdentifierType = patientService.getPatientIdentifierTypeByUuid(RMSModuleConstants.NATIONAL_UNIQUE_PATIENT_IDENTIFIER);
 		for (PatientIdentifier identifier : patient.getActiveIdentifiers()) {
 			Identifier fhirIdentifier = new Identifier();
-			fhirIdentifier.setSystem("http://fhir.openmrs.org/ext/patient/identifier#system");
+            if(identifier.getIdentifierType().equals(nationalIdPatientIdentifierType)) {
+                fhirIdentifier.setSystem("https://hie.kisumu.go.ke/IdentifierSystem/NATIONAL-ID");
+            } else if(identifier.getIdentifierType().equals(nupiPatientIdentifierType)) {
+                fhirIdentifier.setSystem("https://hie.kisumu.go.ke/IdentifierSystem/KENYA-NATIONAL-UPI");
+            } else {
+			    fhirIdentifier.setSystem("http://fhir.openmrs.org/ext/patient/identifier#system");
+            }
 			fhirIdentifier.setValue(identifier.getIdentifier());
 			fhirIdentifier.setUse(Identifier.IdentifierUse.OFFICIAL);
 			patientResource.addIdentifier(fhirIdentifier);
