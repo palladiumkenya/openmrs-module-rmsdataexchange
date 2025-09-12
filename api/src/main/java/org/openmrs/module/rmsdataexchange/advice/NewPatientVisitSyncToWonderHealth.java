@@ -66,7 +66,7 @@ import ca.uhn.fhir.context.FhirContext;
 /**
  * Detects when a new visit has started and syncs patient data to Wonder Health
  */
-public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningAdvice {
+public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 	
 	private Boolean debugMode = false;
 	
@@ -522,7 +522,7 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 					URL finWonderHealthUrl = new URL(wonderHealthUrl);
 					
 					// Debug TODO: remove in production
-					trustAllCerts();
+					AdviceUtils.trustAllCerts();
 					
 					if (finWonderHealthUrl.getProtocol().equalsIgnoreCase("https")) {
 						connection = (HttpsURLConnection) finWonderHealthUrl.openConnection();
@@ -753,54 +753,6 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 				// Context.closeSession();
 			}
 		}
-	}
-	
-	/**
-	 * Trust all certs
-	 */
-	public static void trustAllCerts() {
-		TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-			
-			public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-				return null;
-			}
-			
-			@Override
-			public void checkClientTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
-			}
-			
-			@Override
-			public void checkServerTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
-			}
-		} };
-		
-		SSLContext sc = null;
-		try {
-			sc = SSLContext.getInstance("SSL");
-		}
-		catch (NoSuchAlgorithmException e) {
-			System.out.println(e.getMessage());
-		}
-		try {
-			sc.init(null, trustAllCerts, new java.security.SecureRandom());
-		}
-		catch (KeyManagementException e) {
-			System.out.println(e.getMessage());
-		}
-		HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-		
-		// Optional 
-		// Create all-trusting host name verifier
-		HostnameVerifier validHosts = new HostnameVerifier() {
-			
-			@Override
-			public boolean verify(String arg0, SSLSession arg1) {
-				return true;
-			}
-		};
-		// All hosts will be valid
-		HttpsURLConnection.setDefaultHostnameVerifier(validHosts);
-		
 	}
 	
 }

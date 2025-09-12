@@ -1,15 +1,27 @@
 package org.openmrs.module.rmsdataexchange.api.util;
 
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.Hibernate;
+import org.hl7.fhir.r4.model.Coding;
+import org.openmrs.Concept;
+import org.openmrs.ConceptNumeric;
 import org.openmrs.GlobalProperty;
+import org.openmrs.Location;
+import org.openmrs.LocationAttribute;
+import org.openmrs.LocationAttributeType;
+import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.Person;
@@ -36,6 +48,13 @@ import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
 import org.openmrs.util.PrivilegeConstants;
 
 import java.util.concurrent.ThreadLocalRandom;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 public class AdviceUtils {
 	
@@ -261,6 +280,25 @@ public class AdviceUtils {
 		String isWONDERHEALTHLoggingEnabled = globalWONDERHEALTHEnabled.getPropertyValue();
 		
 		if (isWONDERHEALTHLoggingEnabled != null && isWONDERHEALTHLoggingEnabled.trim().equalsIgnoreCase("true")) {
+			ret = true;
+		}
+		
+		return (ret);
+	}
+	
+	/**
+	 * Checks whether HIE CR Integration is enabled
+	 * 
+	 * @return true (Enabled) and false (Disabled)
+	 */
+	public static Boolean isHIECRIntegrationEnabled() {
+		Boolean ret = false;
+		
+		GlobalProperty globalHIECREnabled = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.HIECR_SYNC_ENABLED);
+		String isHIECRLoggingEnabled = globalHIECREnabled.getPropertyValue();
+		
+		if (isHIECRLoggingEnabled != null && isHIECRLoggingEnabled.trim().equalsIgnoreCase("true")) {
 			ret = true;
 		}
 		
@@ -663,6 +701,230 @@ public class AdviceUtils {
 			newAttribute.setPayment(payment);
 			rmsPaymentAttributeService.savePaymentAttribute(newAttribute);
 		}
+	}
+	
+	/**
+	 * Get the latest OBS
+	 * 
+	 * @param patient
+	 * @param conceptIdentifier
+	 * @return
+	 */
+	public static Obs getLatestObs(Patient patient, String conceptIdentifier) {
+		Concept concept = getConcept(conceptIdentifier);
+		if (concept != null) {
+			List<Obs> obs = Context.getObsService().getObservationsByPersonAndConcept(patient, concept);
+			if (obs.size() > 0) {
+				// these are in reverse chronological order
+				return obs.get(0);
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * Gets a concept by an identifier (mapping or UUID)
+	 * 
+	 * @param identifier the identifier
+	 * @return the concept
+	 * @throws org.openmrs.module.metadatadeploy.MissingMetadataException if the concept could not
+	 *             be found
+	 */
+	public static Concept getConcept(String identifier) {
+		Concept concept;
+		
+		if (identifier.contains(":")) {
+			String[] tokens = identifier.split(":");
+			concept = Context.getConceptService().getConceptByMapping(tokens[1].trim(), tokens[0].trim());
+		} else {
+			// Assume it's a UUID
+			concept = Context.getConceptService().getConceptByUuid(identifier);
+		}
+		
+		if (concept == null) {
+			return (null);
+		}
+		
+		// getConcept doesn't always return ConceptNumeric for numeric concepts
+		if (concept.getDatatype().isNumeric() && !(concept instanceof ConceptNumeric)) {
+			concept = Context.getConceptService().getConceptNumeric(concept.getId());
+			
+			if (concept == null) {
+				return (null);
+			}
+		}
+		
+		return concept;
+	}
+	
+	/**
+	 * Decode marital status
+	 */
+	public static String getMaritalStatus(Concept status) {
+		String ret = "-";
+		if (status == getConcept(RMSModuleConstants.MARRIED_POLYGAMOUS))
+			ret = "Married Polygamous";
+		if (status == getConcept(RMSModuleConstants.MARRIED_MONOGAMOUS))
+			;
+		ret = "Married Monogamous";
+		if (status == getConcept(RMSModuleConstants.DIVORCED))
+			;
+		ret = "Divorced";
+		if (status == getConcept(RMSModuleConstants.WIDOWED))
+			;
+		ret = "Widowed";
+		if (status == getConcept(RMSModuleConstants.LIVING_WITH_PARTNER))
+			;
+		ret = "Living With Partner";
+		if (status == getConcept(RMSModuleConstants.NEVER_MARRIED))
+			;
+		ret = "Never Married";
+		return (ret);
+	}
+	
+	/**
+	 * Decode marital status fhir coding Ref: http://terminology.hl7.org/CodeSystem/v3-MaritalStatus
+	 * Ref: https://terminology.hl7.org/6.5.0/CodeSystem-v3-MaritalStatus.html
+	 */
+	public static Coding getMaritalStatusCoding(Concept status) {
+		Coding ret = new Coding();
+		ret.setSystem("http://terminology.hl7.org/CodeSystem/v3-MaritalStatus");
+		
+		if (status == getConcept(RMSModuleConstants.MARRIED_POLYGAMOUS)) {
+			ret.setCode("P");
+			ret.setDisplay("Polygamous");
+		}
+		
+		if (status == getConcept(RMSModuleConstants.MARRIED_MONOGAMOUS)) {
+			ret.setCode("M");
+			ret.setDisplay("Married");
+		}
+		
+		if (status == getConcept(RMSModuleConstants.DIVORCED)) {
+			ret.setCode("D");
+			ret.setDisplay("Divorced");
+		}
+		
+		if (status == getConcept(RMSModuleConstants.WIDOWED)) {
+			ret.setCode("W");
+			ret.setDisplay("Widowed");
+		}
+		
+		if (status == getConcept(RMSModuleConstants.LIVING_WITH_PARTNER)) {
+			ret.setCode("T");
+			ret.setDisplay("Domestic partner");
+		}
+		
+		if (status == getConcept(RMSModuleConstants.NEVER_MARRIED)) {
+			ret.setCode("U");
+			ret.setDisplay("unmarried");
+		}
+		
+		return (ret);
+	}
+	
+	/**
+	 * Trust all certs
+	 */
+	public static void trustAllCerts() {
+		TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+			
+			public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+				return null;
+			}
+			
+			@Override
+			public void checkClientTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
+			}
+			
+			@Override
+			public void checkServerTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
+			}
+		} };
+		
+		SSLContext sc = null;
+		try {
+			sc = SSLContext.getInstance("SSL");
+		}
+		catch (NoSuchAlgorithmException e) {
+			System.out.println(e.getMessage());
+		}
+		try {
+			sc.init(null, trustAllCerts, new java.security.SecureRandom());
+		}
+		catch (KeyManagementException e) {
+			System.out.println(e.getMessage());
+		}
+		HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+		
+		// Optional 
+		// Create all-trusting host name verifier
+		HostnameVerifier validHosts = new HostnameVerifier() {
+			
+			@Override
+			public boolean verify(String arg0, SSLSession arg1) {
+				return true;
+			}
+		};
+		// All hosts will be valid
+		HttpsURLConnection.setDefaultHostnameVerifier(validHosts);
+		
+	}
+	
+	/**
+	 * Gets the default location configured
+	 * 
+	 * @return
+	 */
+	public static Location getDefaultLocation() {
+		Location var2;
+		try {
+			Context.addProxyPrivilege("Get Locations");
+			Context.addProxyPrivilege("Get Global Properties");
+			String GP_DEFAULT_LOCATION = "kenyaemr.defaultLocation";
+			GlobalProperty gp = Context.getAdministrationService().getGlobalPropertyObject(GP_DEFAULT_LOCATION);
+			var2 = gp != null ? (Location) gp.getValue() : null;
+		}
+		finally {
+			Context.removeProxyPrivilege("Get Locations");
+			Context.removeProxyPrivilege("Get Global Properties");
+		}
+		
+		return var2;
+	}
+	
+	/**
+	 * Gets the MFL code of the default location
+	 * 
+	 * @param location
+	 * @return
+	 */
+	public static String getDefaultLocationMflCode(Location location) {
+		String MASTER_FACILITY_CODE = "8a845a89-6aa5-4111-81d3-0af31c45c002";
+		if (location == null) {
+			location = getDefaultLocation();
+		}
+		
+		try {
+			Context.addProxyPrivilege("Get Locations");
+			Context.addProxyPrivilege("Get Global Properties");
+			Iterator var2 = location.getAttributes().iterator();
+			
+			while (var2.hasNext()) {
+				LocationAttribute attr = (LocationAttribute) var2.next();
+				if (((LocationAttributeType) attr.getAttributeType()).getUuid().equals(MASTER_FACILITY_CODE)
+				        && !attr.isVoided()) {
+					String var4 = attr.getValueReference();
+					return var4;
+				}
+			}
+		}
+		finally {
+			Context.removeProxyPrivilege("Get Locations");
+			Context.removeProxyPrivilege("Get Global Properties");
+		}
+		
+		return null;
 	}
 	
 	/**

@@ -44,7 +44,12 @@
 
 	<advice>
 		<point>org.openmrs.api.VisitService</point>
-		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth</class>
+		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientVisitSyncToWonderHealth</class>
+	</advice>
+
+	<advice>
+		<point>org.openmrs.api.PatientService</point>
+		<class>org.openmrs.module.rmsdataexchange.advice.HIEPatientRegistrationAdvice</class>
 	</advice>
 
 	<!-- No need to trap the bill here. We have it trapped at the bean interceptor -->
@@ -124,6 +129,30 @@
 		<property>${project.parent.artifactId}.wonderhealth.integration.auth.token</property>
 		<description>wonder health integration auth token</description>
 		<defaultValue></defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiecr.integration.enabled</property>
+		<description>Whether HIE CR is enabled true (Enabled) or false (Disabled)</description>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiecr.integration.endpoint</property>
+		<description>Endpoint for HIE CR</description>
+		<defaultValue>https://kisumuhie.intellisoftkenya.com</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiecr.integration.username</property>
+		<description>Username for HIE CR</description>
+		<defaultValue>kenya-emr-dev</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiecr.integration.password</property>
+		<description>Password for HIE CR</description>
+		<defaultValue>pgcEJagKyxUTj8v</defaultValue>
 	</globalProperty>
 
 	<!-- Maps hibernate file's, if present -->

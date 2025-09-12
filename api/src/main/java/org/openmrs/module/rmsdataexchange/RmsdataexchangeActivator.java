@@ -32,6 +32,7 @@ public class RmsdataexchangeActivator extends BaseModuleActivator implements Dae
 	/**
 	 * @see #started()
 	 */
+	@Override
 	public void started() {
 		log.info("Started rmsdataexchange Module");
 		System.err.println("rmsdataexchange Module Started: " + AdviceUtils.printCurrentDateTime());
@@ -52,17 +53,17 @@ public class RmsdataexchangeActivator extends BaseModuleActivator implements Dae
 	
 	@Override
 	public void willRefreshContext() {
-		System.err.println("rmsdataexchange Module refreshing context: " + AdviceUtils.printCurrentDateTime());
+		System.err.println("rmsdataexchange Module will refresh context: " + AdviceUtils.printCurrentDateTime());
 	}
 	
 	@Override
 	public void willStart() {
-		System.err.println("rmsdataexchange Module starting: " + AdviceUtils.printCurrentDateTime());
+		System.err.println("rmsdataexchange Module will start: " + AdviceUtils.printCurrentDateTime());
 	}
 	
 	@Override
 	public void willStop() {
-		System.err.println("rmsdataexchange Module stopping: " + AdviceUtils.printCurrentDateTime());
+		System.err.println("rmsdataexchange Module will stop: " + AdviceUtils.printCurrentDateTime());
 	}
 	
 	@Override
