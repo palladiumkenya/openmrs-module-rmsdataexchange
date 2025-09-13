@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.validation.constraints.NotNull;
 
 import org.apache.http.HttpHeaders;
 import org.hl7.fhir.r4.model.Address;
@@ -38,9 +39,17 @@ import org.openmrs.PersonName;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.PersonService;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.Daemon;
+import org.openmrs.module.rmsdataexchange.RmsdataexchangeActivator;
+import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
 import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
+import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
+import org.openmrs.util.PrivilegeConstants;
 import org.springframework.aop.AfterReturningAdvice;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationAdapter;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import ca.uhn.fhir.context.FhirContext;
 
@@ -54,49 +63,25 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 	@Override
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
 		debugMode = AdviceUtils.isRMSLoggingEnabled();
-		System.err.println("Method: " + method.getName());
 		if (AdviceUtils.isHIECRIntegrationEnabled()) {
-			// if ("savePatient".equals(method.getName()) && returnValue instanceof Patient) {
-			if ("saveEncounter".equalsIgnoreCase(method.getName()) && returnValue instanceof Encounter) {
-				Encounter encounter = (Encounter) returnValue;
-				// Patient saved = (Patient) returnValue;
-				Patient saved = encounter.getPatient();
-				
-				// Check if the encounter is new
-				if (encounter.getDateChanged() == null) {
-					// A new encounter
+			if ("savePatient".equals(method.getName()) && returnValue instanceof Patient) {
+				Patient saved = (Patient) returnValue;
+
+				if (saved.getDateChanged() == null) {
+					// New registration -- need to send to CR
 					if (debugMode)
-						System.out.println("rmsdataexchange Module: HIE CR: This encounter is not new");
-					// Check if it is a registration encounter
-					EncounterType registrationEncounterType = Context.getEncounterService().getEncounterTypeByUuid(
-					    RMSModuleConstants.REGISTRATION_ENCOUNTER_TYPE);
-					if (encounter.getEncounterType().equals(registrationEncounterType)) {
-						// This is a registration encounter
-						if (debugMode)
-							System.out
-							        .println("rmsdataexchange Module: HIE CR: Detected a new registration encounter with obs: "
-							                + (encounter.getObs() != null ? encounter.getObs().size() : ""));
-						if (saved.getDateChanged() == null) {
-							// New registration -- need to send to CR
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: HIE CR: New patient registered: "
-								        + saved.getPersonName() + " || We send to CR");
-							sendPatientToCR(saved);
-						} else {
-							// Existing patient edited
-							if (debugMode)
-								System.out.println("rmsdataexchange Module: HIE CR: Existing patient updated: "
-								        + saved.getPersonName() + " || We ignore");
-						}
-					} else {
-						// This is NOT a registration encounter
-						if (debugMode)
-							System.out.println("rmsdataexchange Module: HIE CR: This is not a registration encounter");
-					}
+						System.out.println("rmsdataexchange Module: HIE CR: New patient registered: "
+						        + saved.getPersonName() + " || We send to CR");
+					
+					// sendPatientToCR(saved);
+					syncPatientRunnable runner = new syncPatientRunnable(saved);
+					Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
+
 				} else {
-					// Existing encounter edited
+					// Existing patient edited
 					if (debugMode)
-						System.out.println("rmsdataexchange Module: HIE CR: This encounter is not new");
+						System.out.println("rmsdataexchange Module: HIE CR: Existing patient updated: "
+						        + saved.getPersonName() + " || We ignore");
 				}
 			}
 		} else {
@@ -173,6 +158,7 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: HIE CR: Success sending payload to CR: Response: "
 					        + crResponse);
+				return(true);
 			} else {
 				reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
 				StringBuilder response = new StringBuilder();
@@ -459,6 +445,71 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 		if (debugMode)
 			System.out.println("rmsdataexchange Module: HIE CR: Got FHIR patient registration details: " + ret);
 		return (ret);
+	}
+	
+	/**
+	 * A thread to free up the frontend
+	 */
+	private class syncPatientRunnable implements Runnable {
+		
+		Patient patient = null;
+		
+		Boolean debugMode = false;
+		
+		public syncPatientRunnable(@NotNull Patient patient) {
+			this.patient = patient;
+		}
+		
+		@Override
+		public void run() {
+			// Run the thread
+			
+			try {
+				if (Context.isSessionOpen()) {
+					System.out.println("rmsdataexchange Module: HIE CR: We have an open session H");
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+				} else {
+					System.out.println("rmsdataexchange Module: HIE CR: Error: We have NO open session H");
+					Context.openSession();
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
+				}
+				debugMode = AdviceUtils.isRMSLoggingEnabled();
+				
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: HIE CR: Start sending patient to HIE CR");
+				
+				Integer sleepTime = AdviceUtils.getRandomInt(15000, 20000);
+				// Delay
+				try {
+					//Delay for random seconds
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: HIE CR: Sleep for milliseconds: " + sleepTime);
+					Thread.sleep(sleepTime);
+				}
+				catch (Exception ie) {
+					Thread.currentThread().interrupt();
+				}
+				
+				Boolean testPatientSending = sendPatientToCR(patient);
+				
+				if (!testPatientSending) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: HIE CR: Failed to send patient to HIE CR");
+				} else {
+					// Success sending the patient
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: HIE CR: Finished sending patient to HIE CR");
+				}
+			}
+			catch (Exception ex) {
+				if (debugMode)
+					System.err.println("rmsdataexchange Module: HIE CR: Error. Failed to send patient to HIE CR: "
+					        + ex.getMessage());
+				ex.printStackTrace();
+			}
+		}
 	}
 	
 }

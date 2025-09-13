@@ -47,15 +47,15 @@
 		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientVisitSyncToWonderHealth</class>
 	</advice>
 
-	<!-- <advice>
+	<advice>
 		<point>org.openmrs.api.PatientService</point>
 		<class>org.openmrs.module.rmsdataexchange.advice.HIEPatientRegistrationAdvice</class>
-	</advice> -->
+	</advice>
 
-	<advice>
+	<!-- <advice>
 		<point>org.openmrs.api.EncounterService</point>
 		<class>org.openmrs.module.rmsdataexchange.advice.HIEPatientRegistrationAdvice</class>
-	</advice>
+	</advice> -->
 
 	<!-- No need to trap the bill here. We have it trapped at the bean interceptor -->
 	<!-- <advice>
