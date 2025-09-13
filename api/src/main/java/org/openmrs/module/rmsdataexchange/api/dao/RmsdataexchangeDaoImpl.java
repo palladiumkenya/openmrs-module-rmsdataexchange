@@ -147,7 +147,8 @@ public class RmsdataexchangeDaoImpl implements RmsdataexchangeDao {
 			// Session session = sf.getCurrentSession();
 			// Ensure no caching is used by ignoring the cache
 			// Execute the query and fetch the result
-			NativeQuery query = session.createSQLQuery(q.toString()).setParameter("patientId", patient.getId()).setParameter("conceptId", concept.getId());
+			NativeQuery query = session.createSQLQuery(q.toString()).setParameter("patientId", patient.getId())
+			        .setParameter("conceptId", concept.getId());
 			query.setCacheable(false);
 			List<Object[]> resultList = query.list();
 			

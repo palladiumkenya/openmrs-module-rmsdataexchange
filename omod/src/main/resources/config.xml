@@ -47,8 +47,13 @@
 		<class>org.openmrs.module.rmsdataexchange.advice.NewPatientVisitSyncToWonderHealth</class>
 	</advice>
 
-	<advice>
+	<!-- <advice>
 		<point>org.openmrs.api.PatientService</point>
+		<class>org.openmrs.module.rmsdataexchange.advice.HIEPatientRegistrationAdvice</class>
+	</advice> -->
+
+	<advice>
+		<point>org.openmrs.api.EncounterService</point>
 		<class>org.openmrs.module.rmsdataexchange.advice.HIEPatientRegistrationAdvice</class>
 	</advice>
 

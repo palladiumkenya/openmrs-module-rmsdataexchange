@@ -45,7 +45,7 @@ import org.springframework.aop.AfterReturningAdvice;
 import ca.uhn.fhir.context.FhirContext;
 
 /**
- * Detects when a new payment has been made to a bill and syncs to RMS Financial System
+ * Detects when a new registration encounter has been saved to send reconds to HIE CR
  */
 public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 	
@@ -54,47 +54,54 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 	@Override
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
 		debugMode = AdviceUtils.isRMSLoggingEnabled();
+		System.err.println("Method: " + method.getName());
 		if (AdviceUtils.isHIECRIntegrationEnabled()) {
 			// if ("savePatient".equals(method.getName()) && returnValue instanceof Patient) {
-            if ("saveEncounter".equals(method.getName()) && returnValue instanceof Encounter) {
-                Encounter encounter = (Encounter) returnValue;
+			if ("saveEncounter".equalsIgnoreCase(method.getName()) && returnValue instanceof Encounter) {
+				Encounter encounter = (Encounter) returnValue;
 				// Patient saved = (Patient) returnValue;
-                Patient saved = encounter.getPatient();
+				Patient saved = encounter.getPatient();
 				
-                // Check if the encounter is new
-                if (encounter.getDateChanged() == null) {
-                    // A new encounter
-                    if (debugMode)
-                        System.out.println("rmsdataexchange Module: HIE CR: This encounter is not new");
-                    // Check if it is a registration encounter
-                    EncounterType registrationEncounterType = Context.getEncounterService().getEncounterTypeByUuid(RMSModuleConstants.REGISTRATION_ENCOUNTER_TYPE);
-                    if(encounter.getEncounterType().equals(registrationEncounterType)) {
-                        // This is a registration encounter
-                        if (debugMode)
-                                System.out.println("rmsdataexchange Module: HIE CR: Detected a new registration encounter with obs: " + (encounter.getObs() != null ? encounter.getObs().size() : ""));
-                        if (saved.getDateChanged() == null) {
-                            // New registration -- need to send to CR
-                            if (debugMode)
-                                System.out.println("rmsdataexchange Module: HIE CR: New patient registered: "
-                                        + saved.getPersonName() + " || We send to CR");
-                            sendPatientToCR(saved);
-                        } else {
-                            // Existing patient edited
-                            if (debugMode)
-                                System.out.println("rmsdataexchange Module: HIE CR: Existing patient updated: "
-                                        + saved.getPersonName() + " || We ignore");
-                        }
-                    } else {
-                        // This is NOT a registration encounter
-                        if (debugMode)
-                            System.out.println("rmsdataexchange Module: HIE CR: This is not a registration encounter");
-                    } 
-                } else {
-                    // Existing encounter edited
-                    if (debugMode)
-                        System.out.println("rmsdataexchange Module: HIE CR: This encounter is not new");
-                }
+				// Check if the encounter is new
+				if (encounter.getDateChanged() == null) {
+					// A new encounter
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: HIE CR: This encounter is not new");
+					// Check if it is a registration encounter
+					EncounterType registrationEncounterType = Context.getEncounterService().getEncounterTypeByUuid(
+					    RMSModuleConstants.REGISTRATION_ENCOUNTER_TYPE);
+					if (encounter.getEncounterType().equals(registrationEncounterType)) {
+						// This is a registration encounter
+						if (debugMode)
+							System.out
+							        .println("rmsdataexchange Module: HIE CR: Detected a new registration encounter with obs: "
+							                + (encounter.getObs() != null ? encounter.getObs().size() : ""));
+						if (saved.getDateChanged() == null) {
+							// New registration -- need to send to CR
+							if (debugMode)
+								System.out.println("rmsdataexchange Module: HIE CR: New patient registered: "
+								        + saved.getPersonName() + " || We send to CR");
+							sendPatientToCR(saved);
+						} else {
+							// Existing patient edited
+							if (debugMode)
+								System.out.println("rmsdataexchange Module: HIE CR: Existing patient updated: "
+								        + saved.getPersonName() + " || We ignore");
+						}
+					} else {
+						// This is NOT a registration encounter
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: HIE CR: This is not a registration encounter");
+					}
+				} else {
+					// Existing encounter edited
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: HIE CR: This encounter is not new");
+				}
 			}
+		} else {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: HIE CR: GP system disabled");
 		}
 	}
 	
