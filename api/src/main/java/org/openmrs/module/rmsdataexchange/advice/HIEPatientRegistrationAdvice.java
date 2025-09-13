@@ -66,7 +66,7 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 		if (AdviceUtils.isHIECRIntegrationEnabled()) {
 			if ("savePatient".equals(method.getName()) && returnValue instanceof Patient) {
 				Patient saved = (Patient) returnValue;
-
+				
 				if (saved.getDateChanged() == null) {
 					// New registration -- need to send to CR
 					if (debugMode)
@@ -76,7 +76,7 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 					// sendPatientToCR(saved);
 					syncPatientRunnable runner = new syncPatientRunnable(saved);
 					Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
-
+					
 				} else {
 					// Existing patient edited
 					if (debugMode)
@@ -158,7 +158,7 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: HIE CR: Success sending payload to CR: Response: "
 					        + crResponse);
-				return(true);
+				return (true);
 			} else {
 				reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
 				StringBuilder response = new StringBuilder();
