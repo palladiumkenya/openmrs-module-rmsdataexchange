@@ -9,30 +9,20 @@
  */
 package org.openmrs.module.rmsdataexchange.api;
 
-import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.List;
+import java.util.Set;
 
-import org.hibernate.CacheMode;
 import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Restrictions;
-import org.hibernate.exception.DataException;
+import org.openmrs.Concept;
+import org.openmrs.Patient;
 import org.openmrs.User;
-import org.openmrs.api.db.DAOException;
-import org.openmrs.api.db.hibernate.DbSession;
-import org.openmrs.api.db.hibernate.DbSessionFactory;
-import org.openmrs.module.kenyaemr.cashier.api.model.Bill;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
-import org.openmrs.module.kenyaemr.cashier.api.model.PaymentMode;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSBillAttribute;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSBillAttributeType;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSPaymentAttribute;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSPaymentAttributeType;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSQueue;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Repository;
 
 public interface RmsdataexchangeDao {
 	
@@ -41,6 +31,8 @@ public interface RmsdataexchangeDao {
 	SessionFactory getSessionFactory();
 	
 	Set<Payment> getPaymentsByBillId(Integer billId);
+	
+	Concept getLatestObsConcept(Patient patient, String conceptIdentifier);
 	
 	List<RMSQueue> getQueueItems();
 	

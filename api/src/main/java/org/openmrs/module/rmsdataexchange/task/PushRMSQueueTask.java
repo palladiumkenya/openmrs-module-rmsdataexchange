@@ -6,7 +6,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.module.rmsdataexchange.advice.NewBillCreationSyncToRMS;
 import org.openmrs.module.rmsdataexchange.advice.NewBillPaymentSyncToRMS;
 import org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToRMS;
-import org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth;
+import org.openmrs.module.rmsdataexchange.advice.NewPatientVisitSyncToWonderHealth;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
 import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
@@ -149,7 +149,7 @@ public class PushRMSQueueTask extends AbstractTask {
 							Thread.currentThread().interrupt();
 						}
 						
-						Boolean sendWonderHealthResult = NewPatientRegistrationSyncToWonderHealth
+						Boolean sendWonderHealthResult = NewPatientVisitSyncToWonderHealth
 						        .sendWonderHealthPatientRegistration(payload);
 						if (sendWonderHealthResult == false) {
 							// Failed to send the payload. We update the retries

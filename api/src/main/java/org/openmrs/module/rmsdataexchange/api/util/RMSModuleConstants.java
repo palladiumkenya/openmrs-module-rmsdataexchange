@@ -39,6 +39,13 @@ public class RMSModuleConstants {
 	// public static final String RMS_PATIENT_SYNC_STATUS = "rmsdataexchange.chore.syncpatientstorms.done";
 	
 	// public static final String RMS_BILL_SYNC_STATUS = "rmsdataexchange.chore.syncbillstorms.done";
+	public static final String HIECR_SYNC_ENABLED = "rmsdataexchange.hiecr.integration.enabled";
+	
+	public static final String HIECR_SYNC_ENDPOINT = "rmsdataexchange.hiecr.integration.endpoint";
+	
+	public static final String HIECR_SYNC_USERNAME = "rmsdataexchange.hiecr.integration.username";
+	
+	public static final String HIECR_SYNC_PASSWORD = "rmsdataexchange.hiecr.integration.password";
 	
 	public static final String WONDERHEALTH_SYNC_ENABLED = "rmsdataexchange.wonderhealth.integration.enabled";
 	
@@ -65,6 +72,44 @@ public class RMSModuleConstants {
 	public static final String BILL_ATTRIBUTE_RMS_SYNCHRONIZED_UUID = "78a8fdd0-42fa-4a21-924f-3d035b4cc0bb";
 	
 	public static final String PAYMENT_ATTRIBUTE_RMS_SYNCHRONIZED_UUID = "b442d94b-2a48-4d69-b47e-80049e8e0735";
+	
+	public static final String CIVIL_STATUS = "1054AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
+	public static final String MARRIED_MONOGAMOUS = "5555AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
+	public static final String MARRIED_POLYGAMOUS = "159715AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
+	public static final String DIVORCED = "1058AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
+	public static final String WIDOWED = "1059AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
+	public static final String LIVING_WITH_PARTNER = "1060AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
+	public static final String NEVER_MARRIED = "1057AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	
+	public static final String TELEPHONE_CONTACT = "b2c38640-2603-4629-aebd-3b54f33f1e3a";
+	
+	public static final String ALTERNATE_PHONE_CONTACT = "94614350-84c8-41e0-ac29-86bc107069be";
+	
+	public static final String NEXT_OF_KIN_ADDRESS = "7cf22bec-d90a-46ad-9f48-035952261294";
+	
+	public static final String NEXT_OF_KIN_CONTACT = "342a1d39-c541-4b29-8818-930916f4c2dc";
+	
+	public static final String NEXT_OF_KIN_NAME = "830bef6d-b01f-449d-9f8d-ac0fede8dbd3";
+	
+	public static final String NEXT_OF_KIN_RELATIONSHIP = "d0aa9fd1-2ac5-45d8-9c5e-4317c622c8f5";
+	
+	public static final String hieCRURLGlobal = "rmsdataexchange.hiecr.integration.endpoint";
+	
+	public static final String hieCRUsernameGlobal = "rmsdataexchange.hiecr.integration.username";
+	
+	public static final String hieCRPasswordGlobal = "rmsdataexchange.hiecr.integration.password";
+	
+	public static final String NATIONAL_ID = "49af6cdc-7968-4abb-bf46-de10d7f4859f";
+	
+	public static final String NATIONAL_UNIQUE_PATIENT_IDENTIFIER = "f85081e2-b4be-4e48-b3a4-7994b69bb101";
+	
+	public static final String REGISTRATION_ENCOUNTER_TYPE = "de1f9d67-b73e-4e1b-90d0-036166fc6995";
 	
 	protected RMSModuleConstants() {
 	}

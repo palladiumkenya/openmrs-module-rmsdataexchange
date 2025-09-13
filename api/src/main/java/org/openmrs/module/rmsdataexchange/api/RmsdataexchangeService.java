@@ -20,6 +20,7 @@ import org.openmrs.module.kenyaemr.cashier.api.util.PrivilegeConstants;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSQueue;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
 import org.springframework.transaction.annotation.Transactional;
+import org.openmrs.Concept;
 import org.openmrs.Patient;
 import org.openmrs.Person;
 
@@ -50,6 +51,9 @@ public interface RmsdataexchangeService extends OpenmrsService {
 	
 	@Transactional
 	RMSQueue removeQueueItem(RMSQueue queue);
+	
+	@Transactional
+	Concept getLatestObsConcept(Patient patient, String conceptIdentifier);
 	
 	@Transactional(readOnly = true)
 	RMSQueueSystem getQueueSystemByUUID(String queueSystemUUID);

@@ -31,7 +31,7 @@
 
     <bean id="locationTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.LocationTranslatorImpl" />
     
-    <bean id="NewPatientRegistrationSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth" >
+    <bean id="NewPatientVisitSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientVisitSyncToWonderHealth" >
         <property name="patientTranslator" ref="patientTranslatorImpl"/>
         <property name="locationTranslator" ref="locationTranslatorImpl"/>
     </bean>
@@ -40,7 +40,7 @@
 
     <bean id="rmsdataexchange.BeanInterceptorConfig" class="org.openmrs.module.rmsdataexchange.advice.BeanInterceptorConfig" />
 
-    <!-- <bean id="rmsdataexchange.NewPatientRegistrationSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientRegistrationSyncToWonderHealth" /> -->
+    <!-- <bean id="rmsdataexchange.NewPatientVisitSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientVisitSyncToWonderHealth" /> -->
 
     <bean id="rmsdataexchange.RMSDataExchangeRestController" class="org.openmrs.module.rmsdataexchange.web.controller.RMSDataExchangeRestController" />
 

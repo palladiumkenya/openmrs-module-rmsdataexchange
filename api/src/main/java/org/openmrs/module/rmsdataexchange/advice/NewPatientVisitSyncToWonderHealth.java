@@ -6,21 +6,12 @@ import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
@@ -45,8 +36,6 @@ import org.openmrs.PersonName;
 import org.openmrs.Relationship;
 import org.openmrs.RelationshipType;
 import org.openmrs.Visit;
-import org.openmrs.VisitAttributeType;
-import org.openmrs.api.VisitService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.Daemon;
 import org.openmrs.module.fhir2.FhirConstants;
@@ -66,7 +55,7 @@ import ca.uhn.fhir.context.FhirContext;
 /**
  * Detects when a new visit has started and syncs patient data to Wonder Health
  */
-public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningAdvice {
+public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 	
 	private Boolean debugMode = false;
 	
@@ -522,7 +511,7 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 					URL finWonderHealthUrl = new URL(wonderHealthUrl);
 					
 					// Debug TODO: remove in production
-					trustAllCerts();
+					AdviceUtils.trustAllCerts();
 					
 					if (finWonderHealthUrl.getProtocol().equalsIgnoreCase("https")) {
 						connection = (HttpsURLConnection) finWonderHealthUrl.openConnection();
@@ -753,54 +742,6 @@ public class NewPatientRegistrationSyncToWonderHealth implements AfterReturningA
 				// Context.closeSession();
 			}
 		}
-	}
-	
-	/**
-	 * Trust all certs
-	 */
-	public static void trustAllCerts() {
-		TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-			
-			public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-				return null;
-			}
-			
-			@Override
-			public void checkClientTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
-			}
-			
-			@Override
-			public void checkServerTrusted(X509Certificate[] arg0, String arg1) throws CertificateException {
-			}
-		} };
-		
-		SSLContext sc = null;
-		try {
-			sc = SSLContext.getInstance("SSL");
-		}
-		catch (NoSuchAlgorithmException e) {
-			System.out.println(e.getMessage());
-		}
-		try {
-			sc.init(null, trustAllCerts, new java.security.SecureRandom());
-		}
-		catch (KeyManagementException e) {
-			System.out.println(e.getMessage());
-		}
-		HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-		
-		// Optional 
-		// Create all-trusting host name verifier
-		HostnameVerifier validHosts = new HostnameVerifier() {
-			
-			@Override
-			public boolean verify(String arg0, SSLSession arg1) {
-				return true;
-			}
-		};
-		// All hosts will be valid
-		HttpsURLConnection.setDefaultHostnameVerifier(validHosts);
-		
 	}
 	
 }

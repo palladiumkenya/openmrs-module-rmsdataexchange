@@ -11,6 +11,7 @@ package org.openmrs.module.rmsdataexchange.api.impl;
 
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.DataException;
+import org.openmrs.Concept;
 import org.openmrs.Patient;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
@@ -104,5 +105,10 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	@Override
 	public RMSQueueSystem getQueueSystemByID(Integer queueSystemID) throws DataException {
 		return (dao.getQueueSystemByID(queueSystemID));
+	}
+	
+	@Override
+	public Concept getLatestObsConcept(Patient patient, String conceptIdentifier) {
+		return (dao.getLatestObsConcept(patient, conceptIdentifier));
 	}
 }

@@ -14,11 +14,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.BaseModuleActivator;
 import org.openmrs.module.DaemonToken;
 import org.openmrs.module.DaemonTokenAware;
-import org.openmrs.module.rmsdataexchange.advice.BeanInterceptorConfig;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * This class contains the logic that is run every time this module is either started or shutdown
@@ -32,6 +28,7 @@ public class RmsdataexchangeActivator extends BaseModuleActivator implements Dae
 	/**
 	 * @see #started()
 	 */
+	@Override
 	public void started() {
 		log.info("Started rmsdataexchange Module");
 		System.err.println("rmsdataexchange Module Started: " + AdviceUtils.printCurrentDateTime());
@@ -52,17 +49,17 @@ public class RmsdataexchangeActivator extends BaseModuleActivator implements Dae
 	
 	@Override
 	public void willRefreshContext() {
-		System.err.println("rmsdataexchange Module refreshing context: " + AdviceUtils.printCurrentDateTime());
+		System.err.println("rmsdataexchange Module will refresh context: " + AdviceUtils.printCurrentDateTime());
 	}
 	
 	@Override
 	public void willStart() {
-		System.err.println("rmsdataexchange Module starting: " + AdviceUtils.printCurrentDateTime());
+		System.err.println("rmsdataexchange Module will start: " + AdviceUtils.printCurrentDateTime());
 	}
 	
 	@Override
 	public void willStop() {
-		System.err.println("rmsdataexchange Module stopping: " + AdviceUtils.printCurrentDateTime());
+		System.err.println("rmsdataexchange Module will stop: " + AdviceUtils.printCurrentDateTime());
 	}
 	
 	@Override
