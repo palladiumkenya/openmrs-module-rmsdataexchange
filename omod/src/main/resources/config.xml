@@ -145,7 +145,7 @@
 	<globalProperty>
 		<property>${project.parent.artifactId}.hiecr.integration.endpoint</property>
 		<description>Endpoint for HIE CR</description>
-		<defaultValue>https://kisumuhie.intellisoftkenya.com</defaultValue>
+		<defaultValue>https://kisumuhie.intellisoftkenya.com/client-registry/v1/Patient</defaultValue>
 	</globalProperty>
 
 	<globalProperty>
@@ -158,6 +158,12 @@
 		<property>${project.parent.artifactId}.hiecr.integration.password</property>
 		<description>Password for HIE CR</description>
 		<defaultValue>pgcEJagKyxUTj8v</defaultValue>
+	</globalProperty>
+	
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiecr.integration.facilityName</property>
+		<description>Organization name for HIE CR : Using IntellisoftKisumuClinic for test</description>
+		<defaultValue>IntellisoftKisumuClinic</defaultValue>
 	</globalProperty>
 
 	<!-- Maps hibernate file's, if present -->
