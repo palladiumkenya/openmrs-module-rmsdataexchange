@@ -201,16 +201,14 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 		// Set Identifiers
 		PatientIdentifierType nationalIdPatientIdentifierType = patientService
 		        .getPatientIdentifierTypeByUuid(RMSModuleConstants.NATIONAL_ID);
-		PatientIdentifierType nupiPatientIdentifierType = patientService
-		        .getPatientIdentifierTypeByUuid(RMSModuleConstants.NATIONAL_UNIQUE_PATIENT_IDENTIFIER);
+		PatientIdentifierType crPatientIdentifierType = patientService
+		        .getPatientIdentifierTypeByUuid(RMSModuleConstants.SOCIAL_HEALTH_INSURANCE_NUMBER);
 		for (PatientIdentifier identifier : patient.getActiveIdentifiers()) {
 			Identifier fhirIdentifier = new Identifier();
 			if (identifier.getIdentifierType().equals(nationalIdPatientIdentifierType)) {
 				fhirIdentifier.setSystem("https://hie.kisumu.go.ke/IdentifierSystem/NATIONAL-ID");
-			} else if (identifier.getIdentifierType().equals(nupiPatientIdentifierType)) {
+			} else if (identifier.getIdentifierType().equals(crPatientIdentifierType)) {
 				fhirIdentifier.setSystem("https://hie.kisumu.go.ke/IdentifierSystem/KENYA-NATIONAL-UPI");
-			} else {
-				fhirIdentifier.setSystem("http://fhir.openmrs.org/ext/patient/identifier#system");
 			}
 			fhirIdentifier.setValue(identifier.getIdentifier());
 			fhirIdentifier.setUse(Identifier.IdentifierUse.OFFICIAL);
@@ -430,12 +428,16 @@ public class HIEPatientRegistrationAdvice implements AfterReturningAdvice {
 		patientResource.setContact(theContact);
 		
 		// managing organization
+		GlobalProperty globalHIECROrganizationName = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.hieCRFacilityGlobal);
+		String strOrganizationName = globalHIECROrganizationName.getPropertyValue();
 		Reference patientLocation = new Reference();
 		String currentLocation = AdviceUtils.getDefaultLocationMflCode(null);
 		String facilityName = AdviceUtils.getDefaultLocation().getName();
 		String facilityUuid = AdviceUtils.getDefaultLocation().getUuid();
 		patientLocation.setId(facilityUuid);
-		patientLocation.setReference("Organization/" + currentLocation);
+		//patientLocation.setReference("Organization/" + currentLocation);  
+		patientLocation.setReference("Organization/" + strOrganizationName); //TODO: Determine whether Facility names match Organization names in HIE - in such case use locations
 		patientLocation.setDisplay(facilityName);
 		patientResource.setManagingOrganization(patientLocation);
 		
