@@ -114,6 +114,17 @@ public class RMSModuleConstants {
 	public static final String SOCIAL_HEALTH_INSURANCE_NUMBER = "52c3c0c3-05b8-4b26-930e-2a6a54e14c90";
 	
 	public static final String REGISTRATION_ENCOUNTER_TYPE = "de1f9d67-b73e-4e1b-90d0-036166fc6995";
+
+	// Pregnancy Check
+	public static final String PREGNANCY_STATUS = "5272AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+	public static final String DATE_OF_CONFINEMENT = "5599AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+	public static final String YES = "1065AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
+	public static final String MCHMS_ENROLLMENT = "3ee036d8-7c13-4393-b5d6-036f2fe45126";
+
+	public static final String MCHMS_DISCONTINUATION = "7c426cfc-3b47-4481-b55f-89860c21c7de";
 	
 	protected RMSModuleConstants() {
 	}
