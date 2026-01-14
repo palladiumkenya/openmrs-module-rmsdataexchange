@@ -954,84 +954,78 @@ public class AdviceUtils {
 		
 		return null;
 	}
-
+	
 	/**
 	 * Checks if the given patient is currently pregnant
+	 * 
 	 * @param target
 	 * @return true if pregannt, false if not pregnant
 	 */
 	public static Boolean isPatientPregnant(Patient target) {
 		Boolean ret = false;
-
+		
 		ObsService obsService = Context.getObsService();
 		EncounterService encounterService = Context.getEncounterService();
 		ConceptService conceptService = Context.getConceptService();
-
+		
 		// Only alive females qualify
-        if (target == null || target.getDead() || !"F".equalsIgnoreCase(target.getGender())) {
-            return false;
-        }
-
+		if (target == null || target.getDead() || !"F".equalsIgnoreCase(target.getGender())) {
+			return false;
+		}
+		
 		EncounterType mchEnrollment = encounterService.getEncounterTypeByUuid(RMSModuleConstants.MCHMS_ENROLLMENT);
-        EncounterType mchDiscontinuation = encounterService.getEncounterTypeByUuid(RMSModuleConstants.MCHMS_DISCONTINUATION);
-
+		EncounterType mchDiscontinuation = encounterService.getEncounterTypeByUuid(RMSModuleConstants.MCHMS_DISCONTINUATION);
+		
 		Concept pregnancyStatus = conceptService.getConceptByUuid(RMSModuleConstants.PREGNANCY_STATUS);
 		Concept yes = conceptService.getConceptByUuid(RMSModuleConstants.YES);
-        Concept confinementDateConcept = conceptService.getConceptByUuid(RMSModuleConstants.DATE_OF_CONFINEMENT);
-
+		Concept confinementDateConcept = conceptService.getConceptByUuid(RMSModuleConstants.DATE_OF_CONFINEMENT);
+		
 		// Last pregnancy status obs
-        Obs pregStatusObs = getLastObs(
-            target, pregnancyStatus
-        );
-
+		Obs pregStatusObs = getLastObs(target, pregnancyStatus);
+		
 		// Last MCH enrollment
-        Encounter enrollment = getLastEncounter(
-            target, mchEnrollment
-        );
-
+		Encounter enrollment = getLastEncounter(target, mchEnrollment);
+		
 		// Last MCH discontinuation
-        Encounter discontinuation = getLastEncounter(
-            target, mchDiscontinuation
-        );
-
+		Encounter discontinuation = getLastEncounter(target, mchDiscontinuation);
+		
 		// Last confinement date
-        Obs confinement = getLastObs(
-            target, confinementDateConcept
-        );
-
-        if (pregStatusObs != null && yes.equals(pregStatusObs.getValueCoded())) {
-            ret = true;
-        }
-
-        if (enrollment != null) {
-            ret = true;
-        }
-
-        if (enrollment != null && discontinuation != null &&
-                discontinuation.getEncounterDatetime().after(enrollment.getEncounterDatetime())) {
-            ret = false;
-        }
-
-        if (pregStatusObs != null && confinement != null &&
-                confinement.getValueDatetime().after(pregStatusObs.getObsDatetime())) {
-            ret= false;
-        }
-
-        if (enrollment != null && confinement != null &&
-                confinement.getValueDatetime().after(enrollment.getEncounterDatetime())) {
-            ret = false;
-        }
-
-        if (enrollment != null && confinement != null &&
-                confinement.getValueDatetime().before(enrollment.getEncounterDatetime())) {
-            ret = false;
-        }
-
-		return(ret);
+		Obs confinement = getLastObs(target, confinementDateConcept);
+		
+		if (pregStatusObs != null && yes.equals(pregStatusObs.getValueCoded())) {
+			ret = true;
+		}
+		
+		if (enrollment != null) {
+			ret = true;
+		}
+		
+		if (enrollment != null && discontinuation != null
+		        && discontinuation.getEncounterDatetime().after(enrollment.getEncounterDatetime())) {
+			ret = false;
+		}
+		
+		if (pregStatusObs != null && confinement != null
+		        && confinement.getValueDatetime().after(pregStatusObs.getObsDatetime())) {
+			ret = false;
+		}
+		
+		if (enrollment != null && confinement != null
+		        && confinement.getValueDatetime().after(enrollment.getEncounterDatetime())) {
+			ret = false;
+		}
+		
+		if (enrollment != null && confinement != null
+		        && confinement.getValueDatetime().before(enrollment.getEncounterDatetime())) {
+			ret = false;
+		}
+		
+		return (ret);
 	}
-
+	
 	/**
 	 * Get the last obs of the given patient and concept
+	 * 
 	 * @param patient
 	 * @param concept
 	 * @return
@@ -1039,14 +1033,15 @@ public class AdviceUtils {
 	private static Obs getLastObs(Patient patient, Concept concept) {
 		ObsService obsService = Context.getObsService();
 		List<Obs> obs = obsService.getObservationsByPersonAndConcept(patient, concept);
-		if(obs != null && obs.size() > 0) {
-			return(obs.get(0));
+		if (obs != null && obs.size() > 0) {
+			return (obs.get(0));
 		}
 		return null;
 	}
-
+	
 	/**
 	 * Get the last encounter of the given patient and encounter type
+	 * 
 	 * @param patient
 	 * @param encounterType
 	 * @return
@@ -1068,7 +1063,6 @@ public class AdviceUtils {
 
 		return null;
 	}
-	
 	/**
 	 * Get the status of sync chores
 	 * 
