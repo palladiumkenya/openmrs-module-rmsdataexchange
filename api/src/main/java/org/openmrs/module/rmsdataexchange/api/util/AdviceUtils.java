@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -20,6 +21,8 @@ import org.hibernate.SessionFactory;
 import org.hl7.fhir.r4.model.Coding;
 import org.openmrs.Concept;
 import org.openmrs.ConceptNumeric;
+import org.openmrs.Encounter;
+import org.openmrs.EncounterType;
 import org.openmrs.GlobalProperty;
 import org.openmrs.Location;
 import org.openmrs.LocationAttribute;
@@ -34,6 +37,9 @@ import org.openmrs.User;
 import org.openmrs.Visit;
 import org.openmrs.VisitAttribute;
 import org.openmrs.VisitAttributeType;
+import org.openmrs.api.ConceptService;
+import org.openmrs.api.EncounterService;
+import org.openmrs.api.ObsService;
 import org.openmrs.api.PatientService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.Daemon;
@@ -949,6 +955,114 @@ public class AdviceUtils {
 		return null;
 	}
 	
+	/**
+	 * Checks if the given patient is currently pregnant
+	 * 
+	 * @param target
+	 * @return true if pregannt, false if not pregnant
+	 */
+	public static Boolean isPatientPregnant(Patient target) {
+		Boolean ret = false;
+		
+		ObsService obsService = Context.getObsService();
+		EncounterService encounterService = Context.getEncounterService();
+		ConceptService conceptService = Context.getConceptService();
+		
+		// Only alive females qualify
+		if (target == null || target.getDead() || !"F".equalsIgnoreCase(target.getGender())) {
+			return false;
+		}
+		
+		EncounterType mchEnrollment = encounterService.getEncounterTypeByUuid(RMSModuleConstants.MCHMS_ENROLLMENT);
+		EncounterType mchDiscontinuation = encounterService.getEncounterTypeByUuid(RMSModuleConstants.MCHMS_DISCONTINUATION);
+		
+		Concept pregnancyStatus = conceptService.getConceptByUuid(RMSModuleConstants.PREGNANCY_STATUS);
+		Concept yes = conceptService.getConceptByUuid(RMSModuleConstants.YES);
+		Concept confinementDateConcept = conceptService.getConceptByUuid(RMSModuleConstants.DATE_OF_CONFINEMENT);
+		
+		// Last pregnancy status obs
+		Obs pregStatusObs = getLastObs(target, pregnancyStatus);
+		
+		// Last MCH enrollment
+		Encounter enrollment = getLastEncounter(target, mchEnrollment);
+		
+		// Last MCH discontinuation
+		Encounter discontinuation = getLastEncounter(target, mchDiscontinuation);
+		
+		// Last confinement date
+		Obs confinement = getLastObs(target, confinementDateConcept);
+		
+		if (pregStatusObs != null && yes.equals(pregStatusObs.getValueCoded())) {
+			ret = true;
+		}
+		
+		if (enrollment != null) {
+			ret = true;
+		}
+		
+		if (enrollment != null && discontinuation != null
+		        && discontinuation.getEncounterDatetime().after(enrollment.getEncounterDatetime())) {
+			ret = false;
+		}
+		
+		if (pregStatusObs != null && confinement != null
+		        && confinement.getValueDatetime().after(pregStatusObs.getObsDatetime())) {
+			ret = false;
+		}
+		
+		if (enrollment != null && confinement != null
+		        && confinement.getValueDatetime().after(enrollment.getEncounterDatetime())) {
+			ret = false;
+		}
+		
+		if (enrollment != null && confinement != null
+		        && confinement.getValueDatetime().before(enrollment.getEncounterDatetime())) {
+			ret = false;
+		}
+		
+		return (ret);
+	}
+	
+	/**
+	 * Get the last obs of the given patient and concept
+	 * 
+	 * @param patient
+	 * @param concept
+	 * @return
+	 */
+	private static Obs getLastObs(Patient patient, Concept concept) {
+		ObsService obsService = Context.getObsService();
+		List<Obs> obs = obsService.getObservationsByPersonAndConcept(patient, concept);
+		if (obs != null && obs.size() > 0) {
+			return (obs.get(0));
+		}
+		return null;
+	}
+	
+	/**
+	 * Get the last encounter of the given patient and encounter type
+	 * 
+	 * @param patient
+	 * @param encounterType
+	 * @return
+	 */
+	private static Encounter getLastEncounter(Patient patient, EncounterType encounterType) {
+		EncounterService encounterService = Context.getEncounterService();
+		List<Encounter> encounters = encounterService.getEncountersByPatient(patient);
+		List<Encounter> filtered = new LinkedList<>();
+
+		for(Encounter encounter : encounters) {
+			if(encounter.getEncounterType() == encounterType) {
+				filtered.add(encounter);
+			}
+		}
+
+		if(filtered != null && filtered.size() > 0) {
+			return(filtered.get(0));
+		}
+
+		return null;
+	}
 	/**
 	 * Get the status of sync chores
 	 * 

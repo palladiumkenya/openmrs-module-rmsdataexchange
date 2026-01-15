@@ -133,8 +133,9 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 								Patient patient = visit.getPatient();
 								
 								if (patient != null) {
-									// Check if male or female
-									if (patient.getGender().equalsIgnoreCase("F") || patient.getAge() <= 6) {
+									// Ensure the patient is female and pregnant -- if female and pregnant, we will send the data together with children less than  or equal to 5 yrs old
+									// if (patient.getGender().equalsIgnoreCase("F") || patient.getAge() <= 6) {
+									if (patient.getGender().equalsIgnoreCase("F") && AdviceUtils.isPatientPregnant(patient)) {
 										if (debugMode)
 											System.out.println("rmsdataexchange Module: New patient checked in");
 										if (debugMode)
