@@ -6,10 +6,7 @@ import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Date;
-import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.validation.constraints.NotNull;
@@ -17,26 +14,12 @@ import javax.validation.constraints.NotNull;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.hl7.fhir.r4.model.Address;
-import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Enumerations.AdministrativeGender;
-import org.hl7.fhir.r4.model.Extension;
-import org.hl7.fhir.r4.model.HumanName;
-import org.hl7.fhir.r4.model.Identifier;
-import org.hl7.fhir.r4.model.Meta;
-import org.hl7.fhir.r4.model.Reference;
 import org.openmrs.Encounter;
-import org.openmrs.Location;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
-import org.openmrs.Person;
-import org.openmrs.PersonAddress;
-import org.openmrs.PersonName;
-import org.openmrs.Relationship;
-import org.openmrs.RelationshipType;
 import org.openmrs.Visit;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.Daemon;
@@ -45,7 +28,6 @@ import org.openmrs.module.fhir2.api.translators.EncounterTranslator;
 import org.openmrs.module.fhir2.api.translators.LocationTranslator;
 import org.openmrs.module.fhir2.api.translators.ObservationTranslator;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
-import org.openmrs.module.kenyaemr.cashier.util.Utils;
 import org.openmrs.module.rmsdataexchange.RmsdataexchangeActivator;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
@@ -62,8 +44,6 @@ import ca.uhn.fhir.context.FhirContext;
 public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	
 	private Boolean debugMode = false;
-	
-	private static final Integer MAX_CHILD_AGE = 5;
 	
 	private PatientTranslator patientTranslator;
 	
@@ -109,17 +89,17 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
 		try {
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
-			if (AdviceUtils.isWonderHealthIntegrationEnabled()) {
+			if (AdviceUtils.isHIEMCHIntegrationEnabled()) {
 				
 				if (method.getName().equals("saveVisit") && args.length > 0 && args[0] instanceof Visit) {
 					
 					Visit visit = (Visit) args[0];
 					
-					// check visit info and only process new visits
-					if (visit != null && visit.getStopDatetime() == null) {
+					// check visit info and only process the end of pregnant visits
+					if (visit != null && visit.getStopDatetime() != null) {
 						// Check if visit is already being/been processed (using user property) NB: When checking in a patient, a strange thing happens
 						// If you select to add to the queue, the method "saveVisit" is called twice. This fixes the anomourous behavior
-						String syncCheck = Context.getAuthenticatedUser().getUserProperty("visit-" + visit.getUuid());
+						String syncCheck = Context.getAuthenticatedUser().getUserProperty("hie-mch-visit-" + visit.getUuid());
 						if (debugMode)
 							System.out.println("rmsdataexchange Module: Kisumu HIE: Sync check is: " + syncCheck);
 						
@@ -128,7 +108,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 							if (debugMode)
 								System.out
 								        .println("rmsdataexchange Module: Kisumu HIE: Visit not processed yet. Now processing");
-							Context.getAuthenticatedUser().setUserProperty("visit-" + visit.getUuid(), "1");
+							Context.getAuthenticatedUser().setUserProperty("hie-mch-visit-" + visit.getUuid(), "1");
 							
 
 							if (debugMode)
@@ -156,7 +136,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 									
 									String payload = prepareMaternalProfilePayload(visit);
 									// Use a thread to send the data. This frees up the frontend to proceed
-									syncPatientRunnable runner = new syncPatientRunnable(payload, patient);
+									sendMaternalProfileRunnable runner = new sendMaternalProfileRunnable(payload, patient);
 									Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
 								} else {
 									if (debugMode)
@@ -176,14 +156,14 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 						
 					} else {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Kisumu HIE: Not a new visit. We ignore.");
+							System.out.println("rmsdataexchange Module: Kisumu HIE: This is a new visit. We ignore.");
 					}
 				}
 			}
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("rmsdataexchange Module: Error getting new patient: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error getting maternal profile: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 	}
@@ -224,10 +204,6 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				Bundle bundle = new Bundle();
 				bundle.setType(Bundle.BundleType.TRANSACTION);
 				
-				org.hl7.fhir.r4.model.Patient patientResource = new org.hl7.fhir.r4.model.Patient();
-				org.hl7.fhir.r4.model.Encounter encounterResource = new org.hl7.fhir.r4.model.Encounter();
-				org.hl7.fhir.r4.model.Observation observationResource = new org.hl7.fhir.r4.model.Observation();
-
 				RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
 				
 				if (encounterTranslator == null) {
@@ -267,47 +243,73 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				Set<Encounter> encounters = visit.getEncounters();
 
 				for(Encounter enc : encounters) {
+					org.hl7.fhir.r4.model.Encounter encounterResource = new org.hl7.fhir.r4.model.Encounter();
+					if (encounterTranslator != null) {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Using encounter translator to get the payload");
+						try {
+							encounterResource = encounterTranslator.toFhirResource(enc);
+						}
+						catch (Exception ex) {
+							if (debugMode)
+								System.out.println("rmsdataexchange Module: encounter translator error: " + ex.getMessage());
+							ex.printStackTrace();
+							if (debugMode)
+								System.out.println("rmsdataexchange Module: Using the service to convert to FHIR");
+							encounterResource = rmsdataexchangeService.convertEncounterToFhirResource(enc);
+						}
+					} else {
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: HIE kisumu Manually constructing the payload");
 
+						encounterResource.setId(enc.getUuid());
 
-					Set<Obs> obs = enc.getAllObs();
+					}
+
+					// Add encounter to bundle
+					bundle.addEntry().setFullUrl(FhirConstants.PATIENT + "/" + encounterResource.getIdElement().getIdPart())
+				        .setResource(encounterResource);
+
+					Set<Obs> allObs = enc.getAllObs();
+
+					for(Obs obs: allObs) {
+						org.hl7.fhir.r4.model.Observation observationResource = new org.hl7.fhir.r4.model.Observation();
+						if (observationTranslator != null) {
+							if (debugMode)
+								System.out.println("rmsdataexchange Module: Using encounter translator to get the payload");
+							try {
+								observationResource = observationTranslator.toFhirResource(obs);
+							}
+							catch (Exception ex) {
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: encounter translator error: " + ex.getMessage());
+								ex.printStackTrace();
+								if (debugMode)
+									System.out.println("rmsdataexchange Module: Using the service to convert to FHIR");
+								observationResource = rmsdataexchangeService.convertObservationToFhirResource(obs);
+							}
+						} else {
+							if (debugMode)
+								System.out.println("rmsdataexchange Module: HIE kisumu Manually constructing the payload");
+
+						}
+
+						// Add encounter to bundle
+						bundle.addEntry().setFullUrl(FhirConstants.PATIENT + "/" + observationResource.getIdElement().getIdPart())
+							.setResource(observationResource);
+					}
 				}
 				
-				if (patientTranslator != null) {
-					if (debugMode)
-						System.out.println("rmsdataexchange Module: Using patient translator to get the payload");
-					try {
-						patientResource = patientTranslator.toFhirResource(patient);
-					}
-					catch (Exception ex) {
-						if (debugMode)
-							System.out.println("rmsdataexchange Module: Patient translator error: " + ex.getMessage());
-						ex.printStackTrace();
-						if (debugMode)
-							System.out.println("rmsdataexchange Module: Using the service to convert to FHIR");
-						patientResource = rmsdataexchangeService.convertPatientToFhirResource(patient);
-					}
-				} else {
-					if (debugMode)
-						System.out.println("rmsdataexchange Module: Manually constructing the payload");
-
-				}
-				
-				// Add primary patient to bundle
-				bundle.addEntry().setFullUrl(FhirConstants.PATIENT + "/" + patientResource.getIdElement().getIdPart())
-				        .setResource(patientResource);
 				
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: Creating FHIR payload for patient: " + patient.getUuid());
+					System.out.println("rmsdataexchange Module: Creating FHIR payload for maternal profile: " + visit.getPatient().getUuid());
 				
 				
 				FhirContext fhirContext = FhirContext.forR4();
 				ret = fhirContext.newJsonParser().setPrettyPrint(true).encodeResourceToString(bundle);
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: Got FHIR patient registration details: " + ret);
-				// } else {
-				// 	if (debugMode)
-				// 		System.out.println("rmsdataexchange Module: ERROR: failed to load FHIR patient service");
-				// }
+					System.out.println("rmsdataexchange Module: Got FHIR maternal profile details: " + ret);
+
 			} else {
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: ERROR: visit is null");
@@ -510,7 +512,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	/**
 	 * A thread to free up the frontend
 	 */
-	private class syncPatientRunnable implements Runnable {
+	private class sendMaternalProfileRunnable implements Runnable {
 		
 		String payload = "";
 		
@@ -518,7 +520,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 		
 		Boolean debugMode = false;
 		
-		public syncPatientRunnable(@NotNull String payload, @NotNull Patient patient) {
+		public sendMaternalProfileRunnable(@NotNull String payload, @NotNull Patient patient) {
 			this.payload = payload;
 			this.patient = patient;
 		}
@@ -540,7 +542,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				debugMode = AdviceUtils.isRMSLoggingEnabled();
 				
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: Start sending patient to Kisumu HIE");
+					System.out.println("rmsdataexchange Module: Start sending Maternal Profile to Kisumu HIE");
 				
 				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
 				// Delay
@@ -560,29 +562,29 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					// Failed to send the payload. We put it in the queue
 					if (debugMode)
 						System.err
-						        .println("rmsdataexchange Module: Failed to send patient to Kisumu HIE. Adding to queue");
+						        .println("rmsdataexchange Module: Failed to send Maternal Profile to Kisumu HIE. Adding to queue");
 					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
 					RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
 					        .getQueueSystemByUUID(RMSModuleConstants.WONDER_HEALTH_SYSTEM_PATIENT);
 					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
 					if (addToQueue) {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Finished adding patient to Kisumu HIE Queue");
+							System.out.println("rmsdataexchange Module: Finished adding Maternal Profile to Kisumu HIE Queue");
 						// Mark sent using person attribute
 						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
 						    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
 					} else {
 						if (debugMode)
 							System.err
-							        .println("rmsdataexchange Module: Error: Failed to add patient to Kisumu HIE Queue");
+							        .println("rmsdataexchange Module: Error: Failed to add Maternal Profile to Kisumu HIE Queue");
 						// Mark NOT sent using person attribute
 						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
 						    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "0");
 					}
 				} else {
-					// Success sending the patient
+					// Success sending the Maternal Profile
 					if (debugMode)
-						System.out.println("rmsdataexchange Module: Finished sending patient to Kisumu HIE");
+						System.out.println("rmsdataexchange Module: Finished sending Maternal Profile to Kisumu HIE");
 					// Mark sent using person attribute
 					AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
 					    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
@@ -591,7 +593,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("rmsdataexchange Module: Error. Failed to send patient to Kisumu HIE: "
+					System.err.println("rmsdataexchange Module: Error. Failed to send Maternal Profile to Kisumu HIE: "
 					        + ex.getMessage());
 				ex.printStackTrace();
 			}

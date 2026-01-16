@@ -313,6 +313,25 @@ public class AdviceUtils {
 		
 		return (ret);
 	}
+
+	/**
+	 * Checks whether HIE MCH Integration is enabled
+	 * 
+	 * @return true (Enabled) and false (Disabled)
+	 */
+	public static Boolean isHIEMCHIntegrationEnabled() {
+		Boolean ret = false;
+		
+		GlobalProperty globalHIEMCHEnabled = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.HIEMCH_SYNC_ENABLED);
+		String isHIEMCHLoggingEnabled = globalHIEMCHEnabled.getPropertyValue();
+		
+		if (isHIEMCHLoggingEnabled != null && isHIEMCHLoggingEnabled.trim().equalsIgnoreCase("true")) {
+			ret = true;
+		}
+		
+		return (ret);
+	}
 	
 	/**
 	 * Gets a random integer between lower and upper

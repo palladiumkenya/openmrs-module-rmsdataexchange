@@ -84,15 +84,18 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 		this.userService = userService;
 	}
 	
+	@Override
 	public org.hl7.fhir.r4.model.Patient convertPatientToFhirResource(Patient patient) {
 		return (patientTranslator.toFhirResource(patient));
 	}
 
+	@Override
 	public org.hl7.fhir.r4.model.Encounter convertEncounterToFhirResource(Encounter encounter) {
 		return (encounterTranslator.toFhirResource(encounter));
 	}
 
-	public org.hl7.fhir.r4.model.Observation convertPatientToFhirResource(Obs obs) {
+	@Override
+	public org.hl7.fhir.r4.model.Observation convertObservationToFhirResource(Obs obs) {
 		return (observationTranslator.toFhirResource(obs));
 	}
 	
