@@ -12,12 +12,16 @@ package org.openmrs.module.rmsdataexchange.api.impl;
 import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.DataException;
 import org.openmrs.Concept;
+import org.openmrs.Encounter;
+import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.annotation.Authorized;
 import org.openmrs.api.APIException;
 import org.openmrs.api.UserService;
 import org.openmrs.api.db.DAOException;
 import org.openmrs.api.impl.BaseOpenmrsService;
+import org.openmrs.module.fhir2.api.translators.EncounterTranslator;
+import org.openmrs.module.fhir2.api.translators.ObservationTranslator;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.kenyaemr.cashier.api.model.Payment;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeDao;
@@ -37,6 +41,10 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	UserService userService;
 	
 	private PatientTranslator patientTranslator;
+
+	private EncounterTranslator<org.openmrs.Encounter> encounterTranslator;
+
+	private ObservationTranslator observationTranslator;
 	
 	public PatientTranslator getPatientTranslator() {
 		return patientTranslator;
@@ -46,6 +54,22 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 		this.patientTranslator = patientTranslator;
 	}
 	
+	public EncounterTranslator<org.openmrs.Encounter> getEncounterTranslator() {
+		return encounterTranslator;
+	}
+
+	public void setEncounterTranslator(EncounterTranslator<org.openmrs.Encounter> encounterTranslator) {
+		this.encounterTranslator = encounterTranslator;
+	}
+
+	public ObservationTranslator getObservationTranslator() {
+		return observationTranslator;
+	}
+
+	public void setObservationTranslator(ObservationTranslator observationTranslator) {
+		this.observationTranslator = observationTranslator;
+	}
+
 	/**
 	 * Injected in moduleApplicationContext.xml
 	 */
@@ -62,6 +86,14 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	
 	public org.hl7.fhir.r4.model.Patient convertPatientToFhirResource(Patient patient) {
 		return (patientTranslator.toFhirResource(patient));
+	}
+
+	public org.hl7.fhir.r4.model.Encounter convertEncounterToFhirResource(Encounter encounter) {
+		return (encounterTranslator.toFhirResource(encounter));
+	}
+
+	public org.hl7.fhir.r4.model.Observation convertPatientToFhirResource(Obs obs) {
+		return (observationTranslator.toFhirResource(obs));
 	}
 	
 	@Override

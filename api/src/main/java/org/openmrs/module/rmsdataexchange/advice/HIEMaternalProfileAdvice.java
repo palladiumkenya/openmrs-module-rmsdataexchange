@@ -26,7 +26,9 @@ import org.hl7.fhir.r4.model.HumanName;
 import org.hl7.fhir.r4.model.Identifier;
 import org.hl7.fhir.r4.model.Meta;
 import org.hl7.fhir.r4.model.Reference;
+import org.openmrs.Encounter;
 import org.openmrs.Location;
+import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
 import org.openmrs.PatientIdentifierType;
@@ -39,7 +41,9 @@ import org.openmrs.Visit;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.Daemon;
 import org.openmrs.module.fhir2.FhirConstants;
+import org.openmrs.module.fhir2.api.translators.EncounterTranslator;
 import org.openmrs.module.fhir2.api.translators.LocationTranslator;
+import org.openmrs.module.fhir2.api.translators.ObservationTranslator;
 import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.kenyaemr.cashier.util.Utils;
 import org.openmrs.module.rmsdataexchange.RmsdataexchangeActivator;
@@ -53,9 +57,9 @@ import org.springframework.aop.AfterReturningAdvice;
 import ca.uhn.fhir.context.FhirContext;
 
 /**
- * Detects when a visit has ended and syncs patient data to Wonder Health
+ * Detects when a visit has ended and syncs patient data to Kisumu HIE
  */
-public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
+public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	
 	private Boolean debugMode = false;
 	
@@ -64,6 +68,10 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 	private PatientTranslator patientTranslator;
 	
 	private LocationTranslator locationTranslator;
+
+	private EncounterTranslator<org.openmrs.Encounter> encounterTranslator;
+
+	private ObservationTranslator observationTranslator;
 	
 	public PatientTranslator getPatientTranslator() {
 		return patientTranslator;
@@ -81,22 +89,29 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 		this.locationTranslator = locationTranslator;
 	}
 	
+	public EncounterTranslator<org.openmrs.Encounter> getEncounterTranslator() {
+		return encounterTranslator;
+	}
+
+	public void setEncounterTranslator(EncounterTranslator<org.openmrs.Encounter> encounterTranslator) {
+		this.encounterTranslator = encounterTranslator;
+	}
+
+	public ObservationTranslator getObservationTranslator() {
+		return observationTranslator;
+	}
+
+	public void setObservationTranslator(ObservationTranslator observationTranslator) {
+		this.observationTranslator = observationTranslator;
+	}
+
 	@Override
 	public void afterReturning(Object returnValue, Method method, Object[] args, Object target) throws Throwable {
 		try {
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (AdviceUtils.isWonderHealthIntegrationEnabled()) {
-				// Check if the method is "saveVisit"
-				// if (debugMode)
-				// 	System.out.println("rmsdataexchange Module: Wonder Health: Method: " + method.getName());
 				
 				if (method.getName().equals("saveVisit") && args.length > 0 && args[0] instanceof Visit) {
-					
-					// for (Object object : args) {
-					// 	if (debugMode)
-					// 		System.out.println("rmsdataexchange Module: Wonder Health: Object Type: "
-					// 		        + object.getClass().getName());
-					// }
 					
 					Visit visit = (Visit) args[0];
 					
@@ -106,75 +121,62 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 						// If you select to add to the queue, the method "saveVisit" is called twice. This fixes the anomourous behavior
 						String syncCheck = Context.getAuthenticatedUser().getUserProperty("visit-" + visit.getUuid());
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Wonder Health: Sync check is: " + syncCheck);
+							System.out.println("rmsdataexchange Module: Kisumu HIE: Sync check is: " + syncCheck);
 						
 						if (syncCheck == null || syncCheck.trim().equalsIgnoreCase("0") || syncCheck.isEmpty()
 						        || syncCheck.trim().equalsIgnoreCase("")) {
 							if (debugMode)
 								System.out
-								        .println("rmsdataexchange Module: Wonder Health: Visit not processed yet. Now processing");
+								        .println("rmsdataexchange Module: Kisumu HIE: Visit not processed yet. Now processing");
 							Context.getAuthenticatedUser().setUserProperty("visit-" + visit.getUuid(), "1");
 							
-							// Check if the patient has already been synced (using patient attribute)
-							String attrCheck = AdviceUtils.getPersonAttributeValueByTypeUuid(visit.getPatient(),
-							    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID);
+
 							if (debugMode)
-								System.out
-								        .println("rmsdataexchange Module: Wonder Health: Attribute check is: " + attrCheck);
-							if (attrCheck == null || attrCheck.trim().equalsIgnoreCase("0") || attrCheck.isEmpty()
-							        || attrCheck.trim().equalsIgnoreCase("")) {
-								if (debugMode)
-									System.out.println("rmsdataexchange Module: Visit End Date: " + visit.getStopDatetime());
-								if (debugMode)
-									System.out.println("rmsdataexchange Module: Visit UUID: " + visit.getUuid());
-								if (debugMode)
-									System.out.println("rmsdataexchange Module: Visit Date Changed: "
-									        + visit.getDateChanged());
-								Patient patient = visit.getPatient();
-								
-								if (patient != null) {
-									// Ensure the patient is female and pregnant -- if female and pregnant, we will send the data together with children less than  or equal to 5 yrs old
-									// if (patient.getGender().equalsIgnoreCase("F") || patient.getAge() <= 6) {
-									if (patient.getGender().equalsIgnoreCase("F") && AdviceUtils.isPatientPregnant(patient)) {
-										if (debugMode)
-											System.out.println("rmsdataexchange Module: New patient checked in");
-										if (debugMode)
-											System.out.println("rmsdataexchange Module: Patient Name: "
-											        + patient.getPersonName().getFullName());
-										if (debugMode)
-											System.out.println("rmsdataexchange Module: Patient DOB: "
-											        + patient.getBirthdate());
-										if (debugMode)
-											System.out.println("rmsdataexchange Module: Patient Age: " + patient.getAge());
-										
-										String payload = preparePatientPayload(patient);
-										// Use a thread to send the data. This frees up the frontend to proceed
-										syncPatientRunnable runner = new syncPatientRunnable(payload, patient);
-										Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
-									} else {
-										if (debugMode)
-											System.out
-											        .println("rmsdataexchange Module: Wonder Health: The patient is not female and not below 7 years old");
-									}
+								System.out.println("rmsdataexchange Module: Visit End Date: " + visit.getStopDatetime());
+							if (debugMode)
+								System.out.println("rmsdataexchange Module: Visit UUID: " + visit.getUuid());
+							if (debugMode)
+								System.out.println("rmsdataexchange Module: Visit Date Changed: "
+										+ visit.getDateChanged());
+							Patient patient = visit.getPatient();
+							
+							if (patient != null) {
+								// Ensure the patient is female and pregnant
+								if (patient.getGender().equalsIgnoreCase("F") && AdviceUtils.isPatientPregnant(patient)) {
+									if (debugMode)
+										System.out.println("rmsdataexchange Module: New patient checked in");
+									if (debugMode)
+										System.out.println("rmsdataexchange Module: Patient Name: "
+												+ patient.getPersonName().getFullName());
+									if (debugMode)
+										System.out.println("rmsdataexchange Module: Patient DOB: "
+												+ patient.getBirthdate());
+									if (debugMode)
+										System.out.println("rmsdataexchange Module: Patient Age: " + patient.getAge());
+									
+									String payload = prepareMaternalProfilePayload(visit);
+									// Use a thread to send the data. This frees up the frontend to proceed
+									syncPatientRunnable runner = new syncPatientRunnable(payload, patient);
+									Daemon.runInDaemonThread(runner, RmsdataexchangeActivator.getDaemonToken());
 								} else {
 									if (debugMode)
 										System.out
-										        .println("rmsdataexchange Module: Wonder Health: Error: No patient attached to the visit");
+												.println("rmsdataexchange Module: Kisumu HIE: The patient is not female and not below 7 years old");
 								}
 							} else {
 								if (debugMode)
 									System.out
-									        .println("rmsdataexchange Module: Wonder Health: Patient already sent to remote. We ignore.");
+											.println("rmsdataexchange Module: Kisumu HIE: Error: No patient attached to the visit");
 							}
 						} else {
 							if (debugMode)
 								System.out
-								        .println("rmsdataexchange Module: Wonder Health: Visit already processed. We ignore.");
+								        .println("rmsdataexchange Module: Kisumu HIE: Visit already processed. We ignore.");
 						}
 						
 					} else {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Wonder Health: Not a new visit. We ignore.");
+							System.out.println("rmsdataexchange Module: Kisumu HIE: Not a new visit. We ignore.");
 					}
 				}
 			}
@@ -187,12 +189,12 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 	}
 	
 	/**
-	 * Prepare the FHIR R4 JSON payload for patient registration
+	 * Prepare the FHIR R4 JSON payload for Maternal Profile
 	 * 
 	 * @param patient
 	 * @return
 	 */
-	private String preparePatientPayload(@NotNull Patient patient) {
+	private String prepareMaternalProfilePayload(@NotNull Visit visit) {
 		String ret = "";
 		Boolean debugMode = false;
 		
@@ -217,29 +219,57 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 			}
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			
-			if (patient != null) {
+			if (visit != null) {
 				// Create a new FHIR bundle
 				Bundle bundle = new Bundle();
-				bundle.setType(Bundle.BundleType.COLLECTION);
+				bundle.setType(Bundle.BundleType.TRANSACTION);
 				
 				org.hl7.fhir.r4.model.Patient patientResource = new org.hl7.fhir.r4.model.Patient();
+				org.hl7.fhir.r4.model.Encounter encounterResource = new org.hl7.fhir.r4.model.Encounter();
+				org.hl7.fhir.r4.model.Observation observationResource = new org.hl7.fhir.r4.model.Observation();
+
 				RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
 				
-				if (patientTranslator == null) {
+				if (encounterTranslator == null) {
 					if (debugMode)
-						System.out.println("rmsdataexchange Module: Patient translator is null we call it manually");
+						System.out.println("rmsdataexchange Module: Encounter translator is null we call it manually");
 					try {
-						patientTranslator = Context.getRegisteredComponent("patientTranslatorImpl", PatientTranslator.class);
+						encounterTranslator = Context.getRegisteredComponent("encounterTranslatorImpl", EncounterTranslator.class);
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Got the Patient translator");
+							System.out.println("rmsdataexchange Module: Got the Encounter translator");
 					}
 					catch (Exception ex) {
 						if (debugMode)
 							System.out
-							        .println("rmsdataexchange Module: Completely failed loading the FHIR patientTranslator: "
+							        .println("rmsdataexchange Module: Completely failed loading the FHIR EncounterTranslator: "
 							                + ex.getMessage());
 						ex.printStackTrace();
 					}
+				}
+
+				if (observationTranslator == null) {
+					if (debugMode)
+						System.out.println("rmsdataexchange Module: Observation translator is null we call it manually");
+					try {
+						observationTranslator = Context.getRegisteredComponent("observationTranslatorImpl", ObservationTranslator.class);
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Got the Observation translator");
+					}
+					catch (Exception ex) {
+						if (debugMode)
+							System.out
+							        .println("rmsdataexchange Module: Completely failed loading the FHIR ObservationTranslator: "
+							                + ex.getMessage());
+						ex.printStackTrace();
+					}
+				}
+
+				Set<Encounter> encounters = visit.getEncounters();
+
+				for(Encounter enc : encounters) {
+
+
+					Set<Obs> obs = enc.getAllObs();
 				}
 				
 				if (patientTranslator != null) {
@@ -259,68 +289,7 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 				} else {
 					if (debugMode)
 						System.out.println("rmsdataexchange Module: Manually constructing the payload");
-					// Set Patient ID
-					patientResource.setId(patient.getUuid());
-					
-					// Meta info
-					// Generate a random UUID (v4)
-					UUID uuid = UUID.randomUUID();
-					Meta meta = new Meta();
-					meta.setVersionId(uuid.toString());
-					meta.setLastUpdated(new Date());
-					patientResource.setMeta(meta);
-					
-					// Map Name
-					PersonName personName = patient.getPersonName();
-					if (personName != null) {
-						HumanName name = new HumanName();
-						name.setFamily(personName.getFamilyName());
-						name.addGiven(personName.getGivenName());
-						if (personName.getMiddleName() != null) {
-							name.addGiven(personName.getMiddleName());
-						}
-						patientResource.addName(name);
-					}
-					
-					// Map Identifiers
-					for (PatientIdentifier identifier : patient.getActiveIdentifiers()) {
-						Identifier fhirIdentifier = new Identifier();
-						fhirIdentifier.setSystem("http://fhir.openmrs.org/ext/patient/identifier#system");
-						fhirIdentifier.setValue(identifier.getIdentifier());
-						fhirIdentifier.setUse(Identifier.IdentifierUse.OFFICIAL);
-						patientResource.addIdentifier(fhirIdentifier);
-					}
-					
-					// Map Address
-					for (PersonAddress address : patient.getAddresses()) {
-						Address fhirAddress = new Address();
-						fhirAddress.addLine(address.getAddress1());
-						fhirAddress.addLine(address.getAddress2());
-						fhirAddress.setCity(address.getCityVillage());
-						fhirAddress.setState(address.getStateProvince());
-						fhirAddress.setPostalCode(address.getPostalCode());
-						fhirAddress.setCountry(address.getCountry());
-						fhirAddress.setUse(Address.AddressUse.HOME);
-						patientResource.addAddress(fhirAddress);
-					}
-					
-					// Map Gender
-					if ("M".equalsIgnoreCase(patient.getGender())) {
-						patientResource.setGender(AdministrativeGender.MALE);
-					} else if ("F".equalsIgnoreCase(patient.getGender())) {
-						patientResource.setGender(AdministrativeGender.FEMALE);
-					} else {
-						patientResource.setGender(AdministrativeGender.UNKNOWN);
-					}
-					
-					// Map Birthdate
-					patientResource.setBirthDate(patient.getBirthdate());
-					
-					// Map Deceased status
-					patientResource.setDeceased(new BooleanType(patient.getDead()));
-					
-					// Organization
-					// patientResource.setManagingOrganization(null);
+
 				}
 				
 				// Add primary patient to bundle
@@ -330,119 +299,6 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 				if (debugMode)
 					System.out.println("rmsdataexchange Module: Creating FHIR payload for patient: " + patient.getUuid());
 				
-				// Add location to bundle
-				if (locationTranslator == null) {
-					if (debugMode)
-						System.out.println("rmsdataexchange Module: Location translator is null we call it manually");
-					try {
-						locationTranslator = Context.getRegisteredComponent("locationTranslatorImpl",
-						    LocationTranslator.class);
-						if (debugMode)
-							System.out.println("rmsdataexchange Module: Got the Location translator");
-					}
-					catch (Exception ex) {
-						if (debugMode)
-							System.out
-							        .println("rmsdataexchange Module: Completely failed loading the FHIR locationTranslator: "
-							                + ex.getMessage());
-						ex.printStackTrace();
-					}
-				}
-				
-				Location location = Utils.getDefaultLocation();
-				if (locationTranslator != null) {
-					if (debugMode)
-						System.out
-						        .println("rmsdataexchange Module: Got the location translator Adding location to wonder health bundle");
-					if (location != null) {
-						org.hl7.fhir.r4.model.Location fhirLocation = locationTranslator.toFhirResource(location);
-						if (fhirLocation != null) {
-							String locmfl = Utils.getDefaultLocationMflCode(location);
-							Identifier locationFHIRmfl = new Identifier();
-							locationFHIRmfl.setSystem("https://kmhfl.health.go.ke/fhir/CodeSystem/mfl");
-							locationFHIRmfl.setValue(locmfl);
-							fhirLocation.addIdentifier(locationFHIRmfl);
-							bundle.addEntry()
-							        .setFullUrl(FhirConstants.LOCATION + "/" + fhirLocation.getIdElement().getIdPart())
-							        .setResource(fhirLocation);
-						}
-					}
-				} else {
-					if (debugMode)
-						System.out
-						        .println("rmsdataexchange Module: Failed to get the location translator. We create location resource manualy. Adding location to wonder health bundle");
-					org.hl7.fhir.r4.model.Location fhirLocation = new org.hl7.fhir.r4.model.Location();
-					String locmfl = Utils.getDefaultLocationMflCode(location);
-					Identifier locationFHIRmfl = new Identifier();
-					locationFHIRmfl.setSystem("https://kmhfl.health.go.ke/fhir/CodeSystem/mfl");
-					locationFHIRmfl.setValue(locmfl);
-					fhirLocation.addIdentifier(locationFHIRmfl);
-					bundle.addEntry().setFullUrl(FhirConstants.LOCATION + "/" + fhirLocation.getIdElement().getIdPart())
-					        .setResource(fhirLocation);
-				}
-				
-				//Get any relationships (children under 2yrs age)
-				List<Relationship> relationships = Context.getPersonService().getRelationshipsByPerson(patient);
-				
-				/*+----------------------+--------------------------------------+------------+--------------+
-				| relationship_type_id | uuid                                 | a_is_to_b  | b_is_to_a    |
-				+----------------------+--------------------------------------+------------+--------------+
-				|                    1 | 8d919b58-c2cc-11de-8d13-0010c6dffd0f | Doctor     | Patient      |
-				|                    2 | 8d91a01c-c2cc-11de-8d13-0010c6dffd0f | Sibling    | Sibling      |
-				|                    3 | 8d91a210-c2cc-11de-8d13-0010c6dffd0f | Parent     | Child        |
-				|                    4 | 8d91a3dc-c2cc-11de-8d13-0010c6dffd0f | Aunt/Uncle | Niece/Nephew |
-				|                    5 | 5f115f62-68b7-11e3-94ee-6bef9086de92 | Guardian   | Dependant    |
-				|                    6 | d6895098-5d8d-11e3-94ee-b35a4132a5e3 | Spouse     | Spouse       |
-				|                    7 | 007b765f-6725-4ae9-afee-9966302bace4 | Partner    | Partner      |
-				|                    8 | 2ac0d501-eadc-4624-b982-563c70035d46 | Co-wife    | Co-wife      |
-				+----------------------+--------------------------------------+------------+--------------+
-				*/
-				
-				// Add related child patients to the bundle
-				for (Relationship relationship : relationships) {
-					if (relationship.getRelationshipType().getUuid()
-					        .equalsIgnoreCase("8d91a210-c2cc-11de-8d13-0010c6dffd0f")) {
-						Person relatedPerson = relationship.getPersonB(); // Child
-						
-						if (relatedPerson != null && relatedPerson.getAge() <= MAX_CHILD_AGE) {
-							Patient relatedOpenmrsPatient = Context.getPatientService().getPatientByUuid(
-							    relatedPerson.getUuid());
-							if (relatedOpenmrsPatient != null) {
-								org.hl7.fhir.r4.model.Patient fhirRelatedPatient = patientTranslator
-								        .toFhirResource(relatedOpenmrsPatient);
-								if (fhirRelatedPatient != null) {
-									bundle.addEntry()
-									        .setFullUrl(
-									            FhirConstants.PATIENT + "/" + fhirRelatedPatient.getIdElement().getIdPart())
-									        .setResource(fhirRelatedPatient);
-									
-									// Add an extension to the primary patient for the relationship
-									Extension relationshipExtension = new Extension();
-									relationshipExtension
-									        .setUrl("http://hl7.org/fhir/StructureDefinition/patient-relationship");
-									
-									// Add relationship type (e.g., sibling, parent)
-									RelationshipType relationshipType = relationship.getRelationshipType();
-									if (relationshipType != null) {
-										relationshipExtension.addExtension(new Extension("type",
-										        new org.hl7.fhir.r4.model.CodeableConcept().setText("Child")));
-									}
-									
-									// Add reference to the related patient
-									Reference relatedPatientReference = new Reference();
-									relatedPatientReference.setReference(FhirConstants.PATIENT + "/"
-									        + fhirRelatedPatient.getIdElement().getIdPart());
-									relatedPatientReference.setDisplay(relatedOpenmrsPatient.getPersonName().getFullName());
-									relationshipExtension.addExtension(new Extension("relatedPatient",
-									        relatedPatientReference));
-									
-									// Add the extension to the primary patient
-									patientResource.addExtension(relationshipExtension);
-								}
-							}
-						}
-					}
-				}
 				
 				FhirContext fhirContext = FhirContext.forR4();
 				ret = fhirContext.newJsonParser().setPrettyPrint(true).encodeResourceToString(bundle);
@@ -454,12 +310,12 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 				// }
 			} else {
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: ERROR: patient is null");
+					System.out.println("rmsdataexchange Module: ERROR: visit is null");
 			}
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("rmsdataexchange Module: Error getting new patient payload: " + ex.getMessage());
+				System.err.println("rmsdataexchange Module: Error getting maternal profile payload: " + ex.getMessage());
 			ex.printStackTrace();
 		}
 		finally {
@@ -470,7 +326,7 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 	}
 	
 	/**
-	 * Send the patient registration payload to Wonder Health
+	 * Send the patient registration payload to Kisumu HIE
 	 * 
 	 * @param patient
 	 * @return
@@ -493,17 +349,17 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 			}
 			debugMode = AdviceUtils.isRMSLoggingEnabled();
 			if (debugMode)
-				System.out.println("rmsdataexchange Module: Wonder Health using payload: " + payload);
+				System.out.println("rmsdataexchange Module: Kisumu HIE using payload: " + payload);
 			
 			// Get Auth
 			String authToken = AdviceUtils.getWonderHealthAuthToken();
 			
 			if (authToken != null && !StringUtils.isEmpty(authToken) && !authToken.isEmpty()) {
 				try {
-					// We send the payload to Wonder Health
+					// We send the payload to Kisumu HIE
 					if (debugMode)
 						System.err
-						        .println("rmsdataexchange Module: Wonder Health We got the Auth token. Now sending the patient registration details. Token: "
+						        .println("rmsdataexchange Module: Kisumu HIE We got the Auth token. Now sending the patient registration details. Token: "
 						                + authToken);
 					String wonderHealthUrl = AdviceUtils.getWonderHealthEndpointURL();
 					if (debugMode)
@@ -548,7 +404,7 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 						String finalReturnResponse = finalResponse.toString();
 						if (debugMode)
 							System.out
-							        .println("rmsdataexchange Module: Wonder Health Got patient registration Response as: "
+							        .println("rmsdataexchange Module: Kisumu HIE Got patient registration Response as: "
 							                + finalReturnResponse);
 						
 						ObjectMapper finalMapper = new ObjectMapper();
@@ -567,13 +423,13 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 							
 							if (debugMode)
 								System.err
-								        .println("rmsdataexchange Module: Wonder Health  Got patient registration final response: success: "
+								        .println("rmsdataexchange Module: Kisumu HIE  Got patient registration final response: success: "
 								                + success + " message: " + message);
 						}
 						catch (Exception e) {
 							if (debugMode)
 								System.err
-								        .println("rmsdataexchange Module: Wonder Health Error getting patient registration final response: "
+								        .println("rmsdataexchange Module: Kisumu HIE Error getting patient registration final response: "
 								                + e.getMessage());
 							e.printStackTrace();
 						}
@@ -584,26 +440,26 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 						
 					} else {
 						if (debugMode)
-							System.err.println("rmsdataexchange Module: Wonder Health Failed to send final payload: "
+							System.err.println("rmsdataexchange Module: Kisumu HIE Failed to send final payload: "
 							        + finalResponseCode);
 					}
 				}
 				catch (Exception em) {
 					if (debugMode)
-						System.err.println("rmsdataexchange Module: Wonder Health Error. Failed to send the final payload: "
+						System.err.println("rmsdataexchange Module: Kisumu HIE Error. Failed to send the final payload: "
 						        + em.getMessage());
 					em.printStackTrace();
 				}
 			} else {
 				if (debugMode)
 					System.err
-					        .println("rmsdataexchange Module: Wonder Health Error. Failed to send the final payload: Empty auth token");
+					        .println("rmsdataexchange Module: Kisumu HIE Error. Failed to send the final payload: Empty auth token");
 			}
 			
 		}
 		catch (Exception ex) {
 			if (debugMode)
-				System.err.println("rmsdataexchange Module: Wonder Health Error. Failed to get auth token: "
+				System.err.println("rmsdataexchange Module: Kisumu HIE Error. Failed to get auth token: "
 				        + ex.getMessage());
 			ex.printStackTrace();
 		}
@@ -684,7 +540,7 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 				debugMode = AdviceUtils.isRMSLoggingEnabled();
 				
 				if (debugMode)
-					System.out.println("rmsdataexchange Module: Start sending patient to Wonder Health");
+					System.out.println("rmsdataexchange Module: Start sending patient to Kisumu HIE");
 				
 				Integer sleepTime = AdviceUtils.getRandomInt(5000, 10000);
 				// Delay
@@ -704,21 +560,21 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 					// Failed to send the payload. We put it in the queue
 					if (debugMode)
 						System.err
-						        .println("rmsdataexchange Module: Failed to send patient to Wonder Health. Adding to queue");
+						        .println("rmsdataexchange Module: Failed to send patient to Kisumu HIE. Adding to queue");
 					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
 					RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
 					        .getQueueSystemByUUID(RMSModuleConstants.WONDER_HEALTH_SYSTEM_PATIENT);
 					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
 					if (addToQueue) {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Finished adding patient to Wonder Health Queue");
+							System.out.println("rmsdataexchange Module: Finished adding patient to Kisumu HIE Queue");
 						// Mark sent using person attribute
 						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
 						    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
 					} else {
 						if (debugMode)
 							System.err
-							        .println("rmsdataexchange Module: Error: Failed to add patient to Wonder Health Queue");
+							        .println("rmsdataexchange Module: Error: Failed to add patient to Kisumu HIE Queue");
 						// Mark NOT sent using person attribute
 						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
 						    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "0");
@@ -726,7 +582,7 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 				} else {
 					// Success sending the patient
 					if (debugMode)
-						System.out.println("rmsdataexchange Module: Finished sending patient to Wonder Health");
+						System.out.println("rmsdataexchange Module: Finished sending patient to Kisumu HIE");
 					// Mark sent using person attribute
 					AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
 					    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
@@ -735,7 +591,7 @@ public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("rmsdataexchange Module: Error. Failed to send patient to Wonder Health: "
+					System.err.println("rmsdataexchange Module: Error. Failed to send patient to Kisumu HIE: "
 					        + ex.getMessage());
 				ex.printStackTrace();
 			}
