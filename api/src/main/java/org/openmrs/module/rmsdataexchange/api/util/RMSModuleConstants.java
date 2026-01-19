@@ -47,6 +47,14 @@ public class RMSModuleConstants {
 	
 	public static final String HIECR_SYNC_PASSWORD = "rmsdataexchange.hiecr.integration.password";
 	
+	public static final String HIEMCH_SYNC_ENABLED = "rmsdataexchange.hiemch.integration.enabled";
+	
+	public static final String HIEMCH_SYNC_ENDPOINT = "rmsdataexchange.hiemch.integration.endpoint";
+	
+	public static final String HIEMCH_SYNC_USERNAME = "rmsdataexchange.hiemch.integration.username";
+	
+	public static final String HIEMCH_SYNC_PASSWORD = "rmsdataexchange.hiemch.integration.password";
+	
 	public static final String WONDERHEALTH_SYNC_ENABLED = "rmsdataexchange.wonderhealth.integration.enabled";
 	
 	public static final String WONDERHEALTH_ENDPOINT_URL = "rmsdataexchange.wonderhealth.integration.endpoint.url";

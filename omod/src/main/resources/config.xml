@@ -48,6 +48,11 @@
 	</advice>
 
 	<advice>
+		<point>org.openmrs.api.VisitService</point>
+		<class>org.openmrs.module.rmsdataexchange.advice.HIEMaternalProfileAdvice</class>
+	</advice>
+
+	<advice>
 		<point>org.openmrs.api.PatientService</point>
 		<class>org.openmrs.module.rmsdataexchange.advice.HIEPatientRegistrationAdvice</class>
 	</advice>
@@ -164,6 +169,30 @@
 		<property>${project.parent.artifactId}.hiecr.integration.facilityName</property>
 		<description>Organization name for HIE CR : Using IntellisoftKisumuClinic for test</description>
 		<defaultValue>IntellisoftKisumuClinic</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiemch.integration.enabled</property>
+		<description>Whether HIE CR is enabled true (Enabled) or false (Disabled)</description>
+		<defaultValue>false</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiemch.integration.endpoint</property>
+		<description>Endpoint for HIE CR</description>
+		<defaultValue>https://kisumuhie.intellisoftkenya.com/shr/v1/Encounter</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiemch.integration.username</property>
+		<description>Username for HIE CR</description>
+		<defaultValue>kenya-emr-dev</defaultValue>
+	</globalProperty>
+
+	<globalProperty>
+		<property>${project.parent.artifactId}.hiemch.integration.password</property>
+		<description>Password for HIE CR</description>
+		<defaultValue>pgcEJagKyxUTj8v</defaultValue>
 	</globalProperty>
 
 	<!-- Maps hibernate file's, if present -->

@@ -53,7 +53,7 @@ import org.springframework.aop.AfterReturningAdvice;
 import ca.uhn.fhir.context.FhirContext;
 
 /**
- * Detects when a new visit has started and syncs patient data to Wonder Health
+ * Detects when a visit has ended and syncs patient data to Wonder Health
  */
 public class NewPatientVisitSyncToWonderHealth implements AfterReturningAdvice {
 	

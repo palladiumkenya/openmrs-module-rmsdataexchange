@@ -21,6 +21,8 @@ import org.openmrs.module.rmsdataexchange.queue.model.RMSQueue;
 import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
 import org.springframework.transaction.annotation.Transactional;
 import org.openmrs.Concept;
+import org.openmrs.Encounter;
+import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.Person;
 
@@ -60,6 +62,12 @@ public interface RmsdataexchangeService extends OpenmrsService {
 	
 	@Transactional(readOnly = true)
 	RMSQueueSystem getQueueSystemByID(Integer queueSystemID);
+	
+	@Transactional(readOnly = true)
+	org.hl7.fhir.r4.model.Encounter convertEncounterToFhirResource(Encounter encounter);
+	
+	@Transactional(readOnly = true)
+	org.hl7.fhir.r4.model.Observation convertObservationToFhirResource(Obs obs);
 	
 	// Boolean getBillAttribute(Bill bill, String attributeUUID);
 	
