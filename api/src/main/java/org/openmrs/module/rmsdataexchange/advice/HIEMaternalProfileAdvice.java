@@ -328,14 +328,14 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	}
 	
 	/**
-	 * Send the patient registration payload to Kisumu HIE
+	 * Send the maternal profile payload to Kisumu HIE
 	 * 
-	 * @param patient
+	 * @param load
 	 * @return
 	 */
-	public static Boolean sendWonderHealthPatientRegistration(@NotNull String patient) {
+	public static Boolean sendHIEMaternalProfile(@NotNull String load) {
 		Boolean ret = false;
-		String payload = patient;
+		String payload = load;
 		Boolean debugMode = false;
 		
 		// HttpsURLConnection con = null;
@@ -556,9 +556,9 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					Thread.currentThread().interrupt();
 				}
 				
-				Boolean sendWonderHealthResult = sendWonderHealthPatientRegistration(payload);
+				Boolean sendHIEResult = sendHIEMaternalProfile(payload);
 				
-				if (sendWonderHealthResult == false) {
+				if (sendHIEResult == false) {
 					// Failed to send the payload. We put it in the queue
 					if (debugMode)
 						System.err
