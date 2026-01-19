@@ -293,6 +293,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 							if (debugMode)
 								System.out.println("rmsdataexchange Module: HIE kisumu Manually constructing the payload");
 							
+							observationResource.setId(obs.getUuid());
 						}
 						
 						// Add encounter to bundle
@@ -557,38 +558,40 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				
 				Boolean sendHIEResult = sendHIEMaternalProfile(payload);
 				
-				if (sendHIEResult == false) {
-					// Failed to send the payload. We put it in the queue
-					if (debugMode)
-						System.err
-						        .println("rmsdataexchange Module: Failed to send Maternal Profile to Kisumu HIE. Adding to queue");
-					RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
-					RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
-					        .getQueueSystemByUUID(RMSModuleConstants.WONDER_HEALTH_SYSTEM_PATIENT);
-					Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
-					if (addToQueue) {
-						if (debugMode)
-							System.out
-							        .println("rmsdataexchange Module: Finished adding Maternal Profile to Kisumu HIE Queue");
-						// Mark sent using person attribute
-						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
-						    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
-					} else {
-						if (debugMode)
-							System.err
-							        .println("rmsdataexchange Module: Error: Failed to add Maternal Profile to Kisumu HIE Queue");
-						// Mark NOT sent using person attribute
-						AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
-						    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "0");
-					}
-				} else {
-					// Success sending the Maternal Profile
-					if (debugMode)
-						System.out.println("rmsdataexchange Module: Finished sending Maternal Profile to Kisumu HIE");
-					// Mark sent using person attribute
-					AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
-					    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
-				}
+				// TODO: Put the message in the queue in case of failure to send
+				
+				// if (sendHIEResult == false) {
+				// 	// Failed to send the payload. We put it in the queue
+				// 	if (debugMode)
+				// 		System.err
+				// 		        .println("rmsdataexchange Module: Failed to send Maternal Profile to Kisumu HIE. Adding to queue");
+				// 	RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
+				// 	RMSQueueSystem rmsQueueSystem = rmsdataexchangeService
+				// 	        .getQueueSystemByUUID(RMSModuleConstants.WONDER_HEALTH_SYSTEM_PATIENT);
+				// 	Boolean addToQueue = AdviceUtils.addSyncPayloadToQueue(payload, rmsQueueSystem);
+				// 	if (addToQueue) {
+				// 		if (debugMode)
+				// 			System.out
+				// 			        .println("rmsdataexchange Module: Finished adding Maternal Profile to Kisumu HIE Queue");
+				// 		// Mark sent using person attribute
+				// 		AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+				// 		    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
+				// 	} else {
+				// 		if (debugMode)
+				// 			System.err
+				// 			        .println("rmsdataexchange Module: Error: Failed to add Maternal Profile to Kisumu HIE Queue");
+				// 		// Mark NOT sent using person attribute
+				// 		AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+				// 		    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "0");
+				// 	}
+				// } else {
+				// 	// Success sending the Maternal Profile
+				// 	if (debugMode)
+				// 		System.out.println("rmsdataexchange Module: Finished sending Maternal Profile to Kisumu HIE");
+				// 	// Mark sent using person attribute
+				// 	AdviceUtils.setPersonAttributeValueByTypeUuid(patient,
+				// 	    RMSModuleConstants.PERSON_ATTRIBUTE_WONDER_HEALTH_SYNCHRONIZED_UUID, "1");
+				// }
 				
 			}
 			catch (Exception ex) {

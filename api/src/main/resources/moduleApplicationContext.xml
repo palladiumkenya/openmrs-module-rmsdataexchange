@@ -30,10 +30,21 @@
     <bean id="patientTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.PatientTranslatorImpl" />
 
     <bean id="locationTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.LocationTranslatorImpl" />
+
+	<bean id="encounterTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.EncounterTranslatorImpl" />
+
+    <bean id="observationTranslatorImpl" class="org.openmrs.module.fhir2.api.translators.impl.ObservationTranslatorImpl" />
     
     <bean id="NewPatientVisitSyncToWonderHealth" class="org.openmrs.module.rmsdataexchange.advice.NewPatientVisitSyncToWonderHealth" >
         <property name="patientTranslator" ref="patientTranslatorImpl"/>
         <property name="locationTranslator" ref="locationTranslatorImpl"/>
+    </bean>
+
+	<bean id="HIEMaternalProfileAdvice" class="org.openmrs.module.rmsdataexchange.advice.HIEMaternalProfileAdvice" >
+        <property name="patientTranslator" ref="patientTranslatorImpl"/>
+        <property name="locationTranslator" ref="locationTranslatorImpl"/>
+		<property name="encounterTranslator" ref="encounterTranslatorImpl"/>
+        <property name="observationTranslator" ref="observationTranslatorImpl"/>
     </bean>
 
     <bean id="rmsdataexchange.RmsdataexchangeConfig" class="org.openmrs.module.rmsdataexchange.RmsdataexchangeConfig" />
