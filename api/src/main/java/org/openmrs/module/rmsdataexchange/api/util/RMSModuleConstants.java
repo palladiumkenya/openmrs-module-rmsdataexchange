@@ -46,7 +46,7 @@ public class RMSModuleConstants {
 	public static final String HIECR_SYNC_USERNAME = "rmsdataexchange.hiecr.integration.username";
 	
 	public static final String HIECR_SYNC_PASSWORD = "rmsdataexchange.hiecr.integration.password";
-
+	
 	public static final String HIEMCH_SYNC_ENABLED = "rmsdataexchange.hiemch.integration.enabled";
 	
 	public static final String HIEMCH_SYNC_ENDPOINT = "rmsdataexchange.hiemch.integration.endpoint";

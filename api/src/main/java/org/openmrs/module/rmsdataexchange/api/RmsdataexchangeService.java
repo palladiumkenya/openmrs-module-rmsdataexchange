@@ -62,10 +62,10 @@ public interface RmsdataexchangeService extends OpenmrsService {
 	
 	@Transactional(readOnly = true)
 	RMSQueueSystem getQueueSystemByID(Integer queueSystemID);
-
+	
 	@Transactional(readOnly = true)
 	org.hl7.fhir.r4.model.Encounter convertEncounterToFhirResource(Encounter encounter);
-
+	
 	@Transactional(readOnly = true)
 	org.hl7.fhir.r4.model.Observation convertObservationToFhirResource(Obs obs);
 	

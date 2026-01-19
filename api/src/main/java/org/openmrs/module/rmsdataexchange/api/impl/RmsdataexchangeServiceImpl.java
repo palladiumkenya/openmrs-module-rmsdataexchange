@@ -41,9 +41,9 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	UserService userService;
 	
 	private PatientTranslator patientTranslator;
-
+	
 	private EncounterTranslator<org.openmrs.Encounter> encounterTranslator;
-
+	
 	private ObservationTranslator observationTranslator;
 	
 	public PatientTranslator getPatientTranslator() {
@@ -57,19 +57,19 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	public EncounterTranslator<org.openmrs.Encounter> getEncounterTranslator() {
 		return encounterTranslator;
 	}
-
+	
 	public void setEncounterTranslator(EncounterTranslator<org.openmrs.Encounter> encounterTranslator) {
 		this.encounterTranslator = encounterTranslator;
 	}
-
+	
 	public ObservationTranslator getObservationTranslator() {
 		return observationTranslator;
 	}
-
+	
 	public void setObservationTranslator(ObservationTranslator observationTranslator) {
 		this.observationTranslator = observationTranslator;
 	}
-
+	
 	/**
 	 * Injected in moduleApplicationContext.xml
 	 */
@@ -88,12 +88,12 @@ public class RmsdataexchangeServiceImpl extends BaseOpenmrsService implements Rm
 	public org.hl7.fhir.r4.model.Patient convertPatientToFhirResource(Patient patient) {
 		return (patientTranslator.toFhirResource(patient));
 	}
-
+	
 	@Override
 	public org.hl7.fhir.r4.model.Encounter convertEncounterToFhirResource(Encounter encounter) {
 		return (encounterTranslator.toFhirResource(encounter));
 	}
-
+	
 	@Override
 	public org.hl7.fhir.r4.model.Observation convertObservationToFhirResource(Obs obs) {
 		return (observationTranslator.toFhirResource(obs));
