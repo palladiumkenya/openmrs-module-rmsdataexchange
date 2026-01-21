@@ -130,7 +130,7 @@ public class RMSModuleConstants {
 	
 	public static final String YES = "1065AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 	
-	public static final String MCHMS_ENROLLMENT = "3ee036d8-7c13-4393-b5d6-036f2fe45126";
+	public static final String MCHMS_ENROLLMENT = "613404ad-d08b-4413-8ea7-1867bf291c55";
 	
 	public static final String MCHMS_DISCONTINUATION = "7c426cfc-3b47-4481-b55f-89860c21c7de";
 	
