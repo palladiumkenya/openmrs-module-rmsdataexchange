@@ -104,35 +104,40 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 						String syncCheck = Context.getAuthenticatedUser()
 						        .getUserProperty("hie-mch-visit-" + visit.getUuid());
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Kisumu HIE: Sync check is: " + syncCheck);
+							System.out.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Sync check is: "
+							        + syncCheck);
 						
 						if (syncCheck == null || syncCheck.trim().equalsIgnoreCase("0") || syncCheck.isEmpty()
 						        || syncCheck.trim().equalsIgnoreCase("")) {
 							if (debugMode)
 								System.out
-								        .println("rmsdataexchange Module: Kisumu HIE: Visit not processed yet. Now processing");
+								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Visit not processed yet. Now processing");
 							Context.getAuthenticatedUser().setUserProperty("hie-mch-visit-" + visit.getUuid(), "1");
 							
 							if (debugMode)
-								System.out.println("rmsdataexchange Module: Visit End Date: " + visit.getStopDatetime());
+								System.out.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Visit End Date: "
+								        + visit.getStopDatetime());
 							if (debugMode)
-								System.out.println("rmsdataexchange Module: Visit UUID: " + visit.getUuid());
+								System.out.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Visit UUID: "
+								        + visit.getUuid());
 							if (debugMode)
-								System.out.println("rmsdataexchange Module: Visit Date Changed: " + visit.getDateChanged());
+								System.out
+								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Visit Date Changed: "
+								                + visit.getDateChanged());
 							Patient patient = visit.getPatient();
 							
 							if (patient != null) {
 								// Ensure the patient is female and pregnant
 								if (patient.getGender().equalsIgnoreCase("F") && AdviceUtils.isPatientPregnant(patient)) {
 									if (debugMode)
-										System.out.println("rmsdataexchange Module: New patient checked in");
+										System.out.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient is being checked out");
 									if (debugMode)
-										System.out.println("rmsdataexchange Module: Patient Name: "
+										System.out.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient Name: "
 										        + patient.getPersonName().getFullName());
 									if (debugMode)
-										System.out.println("rmsdataexchange Module: Patient DOB: " + patient.getBirthdate());
+										System.out.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient DOB: " + patient.getBirthdate());
 									if (debugMode)
-										System.out.println("rmsdataexchange Module: Patient Age: " + patient.getAge());
+										System.out.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient Age: " + patient.getAge());
 									
 									String payload = prepareMaternalProfilePayload(visit);
 									// Use a thread to send the data. This frees up the frontend to proceed
@@ -141,22 +146,23 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 								} else {
 									if (debugMode)
 										System.out
-										        .println("rmsdataexchange Module: Kisumu HIE: The patient is not female and not below 7 years old");
+										        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: The patient is either not female and/or not pregnant");
 								}
 							} else {
 								if (debugMode)
 									System.out
-									        .println("rmsdataexchange Module: Kisumu HIE: Error: No patient attached to the visit");
+									        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Error: No patient attached to the visit");
 							}
 						} else {
 							if (debugMode)
 								System.out
-								        .println("rmsdataexchange Module: Kisumu HIE: Visit already processed. We ignore.");
+								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Visit already processed. We ignore.");
 						}
 						
 					} else {
 						if (debugMode)
-							System.out.println("rmsdataexchange Module: Kisumu HIE: This is a new visit. We ignore.");
+							System.out
+							        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: This is a new visit. We ignore.");
 					}
 				}
 			}
@@ -180,7 +186,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 		
 		try {
 			if (Context.isSessionOpen()) {
-				System.out.println("rmsdataexchange Module: We have an open session J");
+				System.out.println("rmsdataexchange Module: We have an open session");
 				Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
 				Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIPS);
 				Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIP_TYPES);
@@ -188,7 +194,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				Context.addProxyPrivilege(PrivilegeConstants.GET_PERSONS);
 				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
 			} else {
-				System.out.println("rmsdataexchange Module: Error: We have NO open session J");
+				System.out.println("rmsdataexchange Module: Error: We have NO open session");
 				Context.openSession();
 				Context.addProxyPrivilege(PrivilegeConstants.GET_IDENTIFIER_TYPES);
 				Context.addProxyPrivilege(PrivilegeConstants.GET_RELATIONSHIPS);
@@ -278,13 +284,13 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 						org.hl7.fhir.r4.model.Observation observationResource = new org.hl7.fhir.r4.model.Observation();
 						if (observationTranslator != null) {
 							if (debugMode)
-								System.out.println("rmsdataexchange Module: Using encounter translator to get the payload");
+								System.out.println("rmsdataexchange Module: Using observation translator to get the payload");
 							try {
 								observationResource = observationTranslator.toFhirResource(obs);
 							}
 							catch (Exception ex) {
 								if (debugMode)
-									System.out.println("rmsdataexchange Module: encounter translator error: "
+									System.out.println("rmsdataexchange Module: observation translator error: "
 									        + ex.getMessage());
 								ex.printStackTrace();
 								if (debugMode)
@@ -344,8 +350,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 		
 		// HttpsURLConnection con = null;
 		HttpURLConnection connection = null;
-		//			
-		//			// Get Auth
+
 		String authUsername = AdviceUtils.getKHIEAuthUserName();
 		String authPassword = AdviceUtils.getKHIEAuthPassword();
 		if (!StringUtils.isEmpty(authUsername) || !StringUtils.isEmpty(authPassword)) {
@@ -463,15 +468,8 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 						        + em.getMessage());
 					em.printStackTrace();
 				}
-				
-			}
-			catch (Exception ex) {
-				if (debugMode)
-					System.err.println("rmsdataexchange Module: Kisumu HIE Error. Failed to get auth token: "
-					        + ex.getMessage());
-				ex.printStackTrace();
-			}
-		} else {
+		}
+		catch (Exception ex) {
 			if (debugMode)
 				System.err.println("rmsdataexchange Module: Kisumu HIE Error. Username or Password not update: ");
 			
@@ -538,11 +536,11 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 			
 			try {
 				if (Context.isSessionOpen()) {
-					System.out.println("rmsdataexchange Module: We have an open session L");
+					System.out.println("rmsdataexchange Module: We have an open session");
 					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
 					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
 				} else {
-					System.out.println("rmsdataexchange Module: Error: We have NO open session L");
+					System.out.println("rmsdataexchange Module: Error: We have NO open session");
 					Context.openSession();
 					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
 					Context.addProxyPrivilege(PrivilegeConstants.GET_PERSON_ATTRIBUTE_TYPES);
@@ -604,8 +602,9 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 			}
 			catch (Exception ex) {
 				if (debugMode)
-					System.err.println("rmsdataexchange Module: Error. Failed to send Maternal Profile to Kisumu HIE: "
-					        + ex.getMessage());
+					System.err
+					        .println("rmsdataexchange Module: Error. Failed to send Maternal Profile to Kisumu HIE Maternal Profile: "
+					                + ex.getMessage());
 				ex.printStackTrace();
 			}
 			finally {
