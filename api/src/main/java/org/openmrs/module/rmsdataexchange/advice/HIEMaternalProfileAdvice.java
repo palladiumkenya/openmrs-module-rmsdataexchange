@@ -6,12 +6,14 @@ import java.io.PrintStream;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Base64;
 import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpHeaders;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.hl7.fhir.r4.model.Bundle;
@@ -342,49 +344,57 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 		
 		// HttpsURLConnection con = null;
 		HttpURLConnection connection = null;
-		try {
-			if (Context.isSessionOpen()) {
-				System.out.println("rmsdataexchange Module: We have an open session K");
-				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
-			} else {
-				System.out.println("rmsdataexchange Module: Error: We have NO open session K");
-				Context.openSession();
-				Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
-			}
-			debugMode = AdviceUtils.isRMSLoggingEnabled();
-			if (debugMode)
-				System.out.println("rmsdataexchange Module: Kisumu HIE using payload: " + payload);
-			
-			// Get Auth
-			String authToken = AdviceUtils.getWonderHealthAuthToken();
-			
-			if (authToken != null && !StringUtils.isEmpty(authToken) && !authToken.isEmpty()) {
+		//			
+		//			// Get Auth
+		String authUsername = AdviceUtils.getKHIEAuthUserName();
+		String authPassword = AdviceUtils.getKHIEAuthPassword();
+		if (!StringUtils.isEmpty(authUsername) || !StringUtils.isEmpty(authPassword)) {
+			try {
+				if (Context.isSessionOpen()) {
+					System.out.println("rmsdataexchange Module: We have an open session K");
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+				} else {
+					System.out.println("rmsdataexchange Module: Error: We have NO open session K");
+					Context.openSession();
+					Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
+				}
+				debugMode = AdviceUtils.isRMSLoggingEnabled();
+				if (debugMode)
+					System.out.println("rmsdataexchange Module: Kisumu HIE using payload: " + payload);
+				
 				try {
+					
 					// We send the payload to Kisumu HIE
+					String auth = authUsername + ":" + authPassword;
 					if (debugMode)
 						System.err
 						        .println("rmsdataexchange Module: Kisumu HIE We got the Auth token. Now sending the patient registration details. Token: "
-						                + authToken);
-					String wonderHealthUrl = AdviceUtils.getWonderHealthEndpointURL();
+						                + auth);
+					String kisumuHIEUrl = AdviceUtils.getKHIEEndpointURL();
 					if (debugMode)
-						System.out.println("rmsdataexchange Module: Wonder health patient registration URL: "
-						        + wonderHealthUrl);
-					URL finWonderHealthUrl = new URL(wonderHealthUrl);
+						System.out
+						        .println("rmsdataexchange Module: Wonder health patient registration URL: " + kisumuHIEUrl);
+					URL url = new URL(kisumuHIEUrl);
+					
+					byte[] encodedAuth = Base64.getEncoder().encode(auth.getBytes("UTF-8"));
+					if (debugMode)
+						System.err.println("rmsdataexchange Module: Kisumu HIE Encoded Auth " + auth);
+					String authHeader = "Basic " + new String(encodedAuth);
 					
 					// Debug TODO: remove in production
 					AdviceUtils.trustAllCerts();
 					
-					if (finWonderHealthUrl.getProtocol().equalsIgnoreCase("https")) {
-						connection = (HttpsURLConnection) finWonderHealthUrl.openConnection();
-					} else if (finWonderHealthUrl.getProtocol().equalsIgnoreCase("http")) {
-						connection = (HttpURLConnection) finWonderHealthUrl.openConnection();
+					if (url.getProtocol().equalsIgnoreCase("https")) {
+						connection = (HttpsURLConnection) url.openConnection();
+					} else if (url.getProtocol().equalsIgnoreCase("http")) {
+						connection = (HttpURLConnection) url.openConnection();
 					}
 					
 					connection.setRequestMethod("POST");
 					connection.setDoOutput(true);
-					connection.setRequestProperty("access-token", authToken);
 					connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 					connection.setRequestProperty("Accept", "application/json");
+					connection.setRequestProperty(HttpHeaders.AUTHORIZATION, authHeader);
 					connection.setConnectTimeout(10000);
 					
 					PrintStream pos = new PrintStream(connection.getOutputStream());
@@ -453,20 +463,18 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 						        + em.getMessage());
 					em.printStackTrace();
 				}
-			} else {
-				if (debugMode)
-					System.err
-					        .println("rmsdataexchange Module: Kisumu HIE Error. Failed to send the final payload: Empty auth token");
+				
 			}
-			
-		}
-		catch (Exception ex) {
+			catch (Exception ex) {
+				if (debugMode)
+					System.err.println("rmsdataexchange Module: Kisumu HIE Error. Failed to get auth token: "
+					        + ex.getMessage());
+				ex.printStackTrace();
+			}
+		} else {
 			if (debugMode)
-				System.err.println("rmsdataexchange Module: Kisumu HIE Error. Failed to get auth token: " + ex.getMessage());
-			ex.printStackTrace();
-		}
-		finally {
-			// Context.closeSession();
+				System.err.println("rmsdataexchange Module: Kisumu HIE Error. Username or Password not update: ");
+			
 		}
 		
 		return (ret);

@@ -1082,6 +1082,7 @@ public class AdviceUtils {
 
 		return null;
 	}
+	
 	/**
 	 * Get the status of sync chores
 	 * 
@@ -1126,5 +1127,58 @@ public class AdviceUtils {
 	// 		rmsBillSyncStatusGP.setPropertyValue("false");
 	// 	}
 	// }
+	/**
+	 * Gets the Kisumu HIE endpoint URL
+	 * 
+	 * @return
+	 */
+	public static String getKHIEEndpointURL() {
+		String ret = "";
+		
+		GlobalProperty globalPostUrl = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.HIEMCH_SYNC_ENDPOINT);
+		String baseURL = globalPostUrl.getPropertyValue();
+		
+		if (baseURL == null || baseURL.trim().isEmpty()) {
+			baseURL = "https://kisumuhie.intellisoftkenya.com/shr/v1/Encounter";
+		}
+		ret = baseURL.trim();
+		
+		return (ret);
+	}
+	
+	/**
+	 * Gets the Kisumu HIE Auth Username
+	 * 
+	 * @return
+	 */
+	public static String getKHIEAuthUserName() {
+		String ret = "";
+		
+		GlobalProperty rmsUserGP = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.HIEMCH_SYNC_USERNAME);
+		String rmsUser = rmsUserGP.getPropertyValue();
+		
+		ret = (rmsUser == null || rmsUser.trim().isEmpty()) ? "" : rmsUser.trim();
+		
+		return (ret);
+	}
+	
+	/**
+	 * Gets the Kisumu Auth Password
+	 * 
+	 * @return
+	 */
+	public static String getKHIEAuthPassword() {
+		String ret = "";
+		
+		GlobalProperty rmsPasswordGP = Context.getAdministrationService().getGlobalPropertyObject(
+		    RMSModuleConstants.HIEMCH_SYNC_PASSWORD);
+		String rmsPassword = rmsPasswordGP.getPropertyValue();
+		
+		ret = (rmsPassword == null || rmsPassword.trim().isEmpty()) ? "" : rmsPassword.trim();
+		
+		return (ret);
+	}
 	
 }

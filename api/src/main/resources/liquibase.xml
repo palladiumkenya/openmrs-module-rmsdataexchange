@@ -234,7 +234,9 @@
             <column name="retired_by" type="int"/>
             <column name="date_retired" type="datetime"/>
             <column name="retire_reason" type="varchar(255)"/>
-            <column name="edit_privilege" type="varchar(255)"/>
+            <column name="edit_privilege" type="varchar(255)">
+			       <constraints nullable="false" />
+			</column>
             <column name="sort_weight" type="double"/>
             <column name="uuid" type="char(38)">
                 <constraints nullable="false"/>
