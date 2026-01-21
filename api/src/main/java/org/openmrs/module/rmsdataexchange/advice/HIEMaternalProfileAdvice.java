@@ -17,6 +17,8 @@ import org.apache.http.HttpHeaders;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.Coding;
 import org.openmrs.Encounter;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
@@ -289,6 +291,14 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 						
 					}
 					
+					// Add the reason code
+					Coding coding = new Coding().setSystem("https://hie.kisumu.go.ke/encounters").setCode("MNCH.B6")
+					        .setDisplay("Maternal Profile");
+					CodeableConcept reasonCode = new CodeableConcept();
+					reasonCode.addCoding(coding);
+					
+					encounterResource.addReasonCode(reasonCode);
+					
 					// Add encounter to bundle
 					bundle.addEntry().setFullUrl(FhirConstants.PATIENT + "/" + encounterResource.getIdElement().getIdPart())
 					        .setResource(encounterResource);
@@ -374,10 +384,10 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 		
 		// HttpsURLConnection con = null;
 		HttpURLConnection connection = null;
-		//			
-		//			// Get Auth
+		
 		String authUsername = AdviceUtils.getKHIEAuthUserName();
 		String authPassword = AdviceUtils.getKHIEAuthPassword();
+		
 		if (!StringUtils.isEmpty(authUsername) || !StringUtils.isEmpty(authPassword)) {
 			try {
 				if (Context.isSessionOpen()) {
@@ -397,7 +407,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				String auth = authUsername + ":" + authPassword;
 				if (debugMode)
 					System.err
-					        .println("rmsdataexchange Module: Kisumu HIE We got the Auth token. Now sending the Maternal Profile details. Token: "
+					        .println("rmsdataexchange Module: Kisumu HIE We got the Auth token. Now sending the Maternal Profile details. Auth: "
 					                + auth);
 				String kisumuHIEUrl = AdviceUtils.getKHIEEndpointURL();
 				if (debugMode)
@@ -431,7 +441,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				
 				int finalResponseCode = connection.getResponseCode();
 				
-				if (finalResponseCode == HttpURLConnection.HTTP_OK) { //success
+				if (finalResponseCode >= 200 && finalResponseCode < 300) { //success
 					BufferedReader fin = null;
 					fin = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 					
@@ -484,6 +494,27 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 						System.err
 						        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile Failed to send final payload: "
 						                + finalResponseCode);
+					// Get the error text
+					try {
+						BufferedReader fin = null;
+						fin = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
+						
+						String finalOutput;
+						StringBuffer finalResponse = new StringBuffer();
+						
+						while ((finalOutput = fin.readLine()) != null) {
+							finalResponse.append(finalOutput);
+						}
+						fin.close();
+						
+						String finalReturnResponse = finalResponse.toString();
+						if (debugMode)
+							System.out.println("rmsdataexchange Module: Kisumu HIE Got Maternal Profile ERROR Response as: "
+							        + finalReturnResponse);
+					}
+					catch (Exception et) {
+						// Error getting error response
+					}
 				}
 			}
 			catch (Exception ex) {
@@ -498,46 +529,6 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				System.err
 				        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile Error. Username or Password not updated");
 			
-		}
-		
-		return (ret);
-	}
-	
-	/**
-	 * Returns the patient identifier
-	 * 
-	 * @param patient
-	 * @param patientIdentifierType
-	 * @return
-	 */
-	private String getPatientIdentifier(Patient patient, PatientIdentifierType patientIdentifierType) {
-		String ret = "";
-		Boolean debugMode = AdviceUtils.isRMSLoggingEnabled();
-		
-		if (patientIdentifierType != null && patient != null) {
-			try {
-				Set<PatientIdentifier> identifiers = patient.getIdentifiers();
-				
-				for (PatientIdentifier patientIdentifier : identifiers) {
-					if (!patientIdentifier.getVoided()
-					        && patientIdentifier.getIdentifierType().equals(patientIdentifierType)) {
-						if (patientIdentifier != null) {
-							ret = patientIdentifier.getIdentifier();
-							if (debugMode)
-								System.err
-								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Got the identifier as: "
-								                + ret);
-							break;
-						}
-					}
-				}
-			}
-			catch (Exception ex) {
-				if (debugMode)
-					System.err.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Getting the identifier: "
-					        + ex.getMessage());
-				ex.printStackTrace();
-			}
 		}
 		
 		return (ret);
