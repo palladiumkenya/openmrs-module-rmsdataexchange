@@ -982,6 +982,7 @@ public class AdviceUtils {
 	 */
 	public static Boolean isPatientPregnant(Patient target) {
 		Boolean ret = false;
+		Boolean debugMode = isRMSLoggingEnabled();
 		
 		ObsService obsService = Context.getObsService();
 		EncounterService encounterService = Context.getEncounterService();
@@ -989,6 +990,8 @@ public class AdviceUtils {
 		
 		// Only alive females qualify
 		if (target == null || target.getDead() || !"F".equalsIgnoreCase(target.getGender())) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: ERROR: Patient is either not female and/or is dead");
 			return false;
 		}
 		
@@ -1012,33 +1015,49 @@ public class AdviceUtils {
 		Obs confinement = getLastObs(target, confinementDateConcept);
 		
 		if (pregStatusObs != null && yes.equals(pregStatusObs.getValueCoded())) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient last obs is pregnant is true");
 			ret = true;
 		}
 		
 		if (enrollment != null) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient is enrolled into MCH program");
 			ret = true;
 		}
 		
 		if (enrollment != null && discontinuation != null
 		        && discontinuation.getEncounterDatetime().after(enrollment.getEncounterDatetime())) {
+			if (debugMode)
+				System.out
+				        .println("rmsdataexchange Module: Pregnancy Check: Patient was enrolled into MCH program but later discontinued");
 			ret = false;
 		}
 		
 		if (pregStatusObs != null && confinement != null
 		        && confinement.getValueDatetime().after(pregStatusObs.getObsDatetime())) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient pregnant and confined");
 			ret = false;
 		}
 		
 		if (enrollment != null && confinement != null
 		        && confinement.getValueDatetime().after(enrollment.getEncounterDatetime())) {
+			if (debugMode)
+				System.out
+				        .println("rmsdataexchange Module: Pregnancy Check: Patient enrolled into MCH before being confined");
 			ret = false;
 		}
 		
 		if (enrollment != null && confinement != null
 		        && confinement.getValueDatetime().before(enrollment.getEncounterDatetime())) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient confined and then enrolled into MCH");
 			ret = false;
 		}
 		
+		if (debugMode)
+			System.out.println("rmsdataexchange Module: Pregnancy Check: Returning: " + ret);
 		return (ret);
 	}
 	
