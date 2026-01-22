@@ -132,6 +132,8 @@ public class RMSModuleConstants {
 	
 	public static final String MCHMS_ENROLLMENT = "613404ad-d08b-4413-8ea7-1867bf291c55";
 	
+	public static final String MCHMS_ANC_FOLLOWUP = "c6d09e05-1f25-4164-8860-9f32c5a02df0";
+	
 	public static final String MCHMS_DISCONTINUATION = "7c426cfc-3b47-4481-b55f-89860c21c7de";
 	
 	protected RMSModuleConstants() {
