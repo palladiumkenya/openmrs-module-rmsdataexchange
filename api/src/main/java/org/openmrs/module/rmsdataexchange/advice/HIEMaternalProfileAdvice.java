@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Base64;
+import java.util.List;
 import java.util.Set;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -19,6 +20,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
+import org.hl7.fhir.r4.model.Reference;
 import org.openmrs.Encounter;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
@@ -260,6 +262,15 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					}
 				}
 				
+				// Patient identifier
+				PatientIdentifier chosenId = null;
+				// Get all patient identifiers
+				List<PatientIdentifier> identifiers = visit.getPatient().getActiveIdentifiers();
+				if (!identifiers.isEmpty()) {
+					// Get the first identifier we can get
+					chosenId = identifiers.iterator().next();
+				}
+				
 				Set<Encounter> encounters = visit.getEncounters();
 				
 				for (Encounter enc : encounters) {
@@ -299,6 +310,23 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					
 					encounterResource.addReasonCode(reasonCode);
 					
+					// Modify encounter patient identifier
+					if (chosenId != null) {
+						Reference encounterRef = encounterResource.getSubject();
+						
+						if (encounterRef != null && encounterRef.getReference() != null) {
+							encounterRef.setReference("Patient/" + chosenId);
+							encounterResource.setSubject(encounterRef);
+							if (debugMode)
+								System.out
+								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Modified the encounter subject to include a patient identifier");
+						}
+					} else {
+						if (debugMode)
+							System.out
+							        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient has no identifiers, we cant modify the encounter subject");
+					}
+					
 					// Add encounter to bundle
 					bundle.addEntry().setFullUrl(FhirConstants.PATIENT + "/" + encounterResource.getIdElement().getIdPart())
 					        .setResource(encounterResource);
@@ -333,7 +361,24 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 							observationResource.setId(obs.getUuid());
 						}
 						
-						// Add encounter to bundle
+						// Modify observation patient identifier
+						if (chosenId != null) {
+							Reference observationRef = observationResource.getSubject();
+							
+							if (observationRef != null && observationRef.getReference() != null) {
+								observationRef.setReference("Patient/" + chosenId);
+								observationResource.setSubject(observationRef);
+								if (debugMode)
+									System.out
+									        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Modified the observation subject to include a patient identifier");
+							}
+						} else {
+							if (debugMode)
+								System.out
+								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient has no identifiers, we cant modify the observation subject");
+						}
+						
+						// Add observation to bundle
 						bundle.addEntry()
 						        .setFullUrl(FhirConstants.PATIENT + "/" + observationResource.getIdElement().getIdPart())
 						        .setResource(observationResource);
