@@ -996,6 +996,7 @@ public class AdviceUtils {
 		}
 		
 		EncounterType mchEnrollment = encounterService.getEncounterTypeByUuid(RMSModuleConstants.MCHMS_ENROLLMENT);
+		EncounterType mchAncFollowUp = encounterService.getEncounterTypeByUuid(RMSModuleConstants.MCHMS_ANC_FOLLOWUP);
 		EncounterType mchDiscontinuation = encounterService.getEncounterTypeByUuid(RMSModuleConstants.MCHMS_DISCONTINUATION);
 		
 		Concept pregnancyStatus = conceptService.getConceptByUuid(RMSModuleConstants.PREGNANCY_STATUS);
@@ -1007,6 +1008,8 @@ public class AdviceUtils {
 		
 		// Last MCH enrollment
 		Encounter enrollment = getLastEncounter(target, mchEnrollment);
+		// Last MCH ANC Followup
+		Encounter ancFollowup = getLastEncounter(target, mchAncFollowUp);
 		
 		// Last MCH discontinuation
 		Encounter discontinuation = getLastEncounter(target, mchDiscontinuation);
@@ -1025,12 +1028,24 @@ public class AdviceUtils {
 				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient is enrolled into MCH program");
 			ret = true;
 		}
+		if (ancFollowup != null) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient is undergoing ANC Followup");
+			ret = true;
+		}
 		
 		if (enrollment != null && discontinuation != null
 		        && discontinuation.getEncounterDatetime().after(enrollment.getEncounterDatetime())) {
 			if (debugMode)
 				System.out
 				        .println("rmsdataexchange Module: Pregnancy Check: Patient was enrolled into MCH program but later discontinued");
+			ret = false;
+		}
+		if (ancFollowup != null && discontinuation != null
+		        && discontinuation.getEncounterDatetime().after(ancFollowup.getEncounterDatetime())) {
+			if (debugMode)
+				System.out
+				        .println("rmsdataexchange Module: Pregnancy Check: Patient was undergoing ANC but later discontinued");
 			ret = false;
 		}
 		
@@ -1053,6 +1068,19 @@ public class AdviceUtils {
 		        && confinement.getValueDatetime().before(enrollment.getEncounterDatetime())) {
 			if (debugMode)
 				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient confined and then enrolled into MCH");
+			ret = false;
+		}
+		if (ancFollowup != null && confinement != null
+		        && confinement.getValueDatetime().after(ancFollowup.getEncounterDatetime())) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient undergoing ANC before being confined");
+			ret = false;
+		}
+		
+		if (ancFollowup != null && confinement != null
+		        && confinement.getValueDatetime().before(ancFollowup.getEncounterDatetime())) {
+			if (debugMode)
+				System.out.println("rmsdataexchange Module: Pregnancy Check: Patient confined and then undergoing ANC");
 			ret = false;
 		}
 		
