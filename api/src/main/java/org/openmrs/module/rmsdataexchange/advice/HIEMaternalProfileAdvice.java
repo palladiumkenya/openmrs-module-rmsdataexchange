@@ -359,7 +359,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					
 					// Add encounter to bundle
 					bundle.addEntry().setFullUrl(FhirConstants.PATIENT + "/" + encounterResource.getIdElement().getIdPart())
-					        .setResource(encounterResource);
+					        .setResource(encounterResource).getRequest().setMethod(Bundle.HTTPVerb.POST).setUrl("Encounter");
 					
 					Set<Obs> allObs = enc.getAllObs();
 					
@@ -411,7 +411,8 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 						// Add observation to bundle
 						bundle.addEntry()
 						        .setFullUrl(FhirConstants.PATIENT + "/" + observationResource.getIdElement().getIdPart())
-						        .setResource(observationResource);
+						        .setResource(observationResource).getRequest().setMethod(Bundle.HTTPVerb.POST)
+						        .setUrl("Observation");
 					}
 				}
 				
