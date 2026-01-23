@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Base64;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -227,6 +228,8 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 				// Create a new FHIR bundle
 				Bundle bundle = new Bundle();
 				bundle.setType(Bundle.BundleType.TRANSACTION);
+				bundle.setId("mnch-b6-maternal-profile-bundle");
+				bundle.setTimestamp(new Date());
 				
 				RmsdataexchangeService rmsdataexchangeService = Context.getService(RmsdataexchangeService.class);
 				
