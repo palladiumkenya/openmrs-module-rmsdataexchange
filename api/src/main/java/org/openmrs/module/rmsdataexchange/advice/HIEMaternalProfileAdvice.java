@@ -59,6 +59,13 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	
 	private ObservationTranslator observationTranslator;
 	
+	// Identifier Type UUIDs (replace with real ones)
+	private static final String CR_ID_UUID = "24aedd37-b5be-4e08-8311-3721b8d5100d";
+	
+	private static final String NATIONAL_ID_UUID = "24aedd37-b5be-4e08-8311-3721b8d5100d";
+	
+	private static final String OPENMRS_ID_UUID = "dfacd928-0370-4315-99d7-6ec1c9f7ae76";
+	
 	public PatientTranslator getPatientTranslator() {
 		return patientTranslator;
 	}
@@ -262,13 +269,33 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					}
 				}
 				
-				// Patient identifier
+				// Get CR ID as preferred Identifier 	
 				PatientIdentifier chosenId = null;
-				// Get all patient identifiers
-				List<PatientIdentifier> identifiers = visit.getPatient().getActiveIdentifiers();
-				if (!identifiers.isEmpty()) {
-					// Get the first identifier we can get
-					chosenId = identifiers.iterator().next();
+				
+				for (PatientIdentifier id : visit.getPatient().getActiveIdentifiers()) {
+					String uuid = id.getIdentifierType().getUuid();
+					if (CR_ID_UUID.equals(uuid)) {
+						chosenId = id;
+						break;
+					}
+				}
+				// Use National ID if CR ID is not available
+				if (chosenId == null) {
+					for (PatientIdentifier id : visit.getPatient().getActiveIdentifiers()) {
+						if (NATIONAL_ID_UUID.equals(id.getIdentifierType().getUuid())) {
+							chosenId = id;
+							break;
+						}
+					}
+				}
+				//Use Openmrs ID if CR and National ID not available
+				if (chosenId == null) {
+					for (PatientIdentifier id : visit.getPatient().getActiveIdentifiers()) {
+						if (OPENMRS_ID_UUID.equals(id.getIdentifierType().getUuid())) {
+							chosenId = id;
+							break;
+						}
+					}
 				}
 				
 				Set<Encounter> encounters = visit.getEncounters();
