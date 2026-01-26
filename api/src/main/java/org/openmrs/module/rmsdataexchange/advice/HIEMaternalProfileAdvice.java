@@ -67,7 +67,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	
 	private static final String SNOMED_SYSTEM = "http://snomed.info/sct";
 	
-	// Identifier Type UUIDs (replace with real ones)
+	// Identifier Type UUIDs
 	private static final String CR_ID_UUID = "24aedd37-b5be-4e08-8311-3721b8d5100d";
 	
 	private static final String NATIONAL_ID_UUID = "24aedd37-b5be-4e08-8311-3721b8d5100d";
@@ -365,8 +365,11 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					}
 					
 					// Add encounter to bundle
-					bundle.addEntry().setFullUrl(FhirConstants.PATIENT + "/" + encounterResource.getIdElement().getIdPart())
-					        .setResource(encounterResource).getRequest().setMethod(Bundle.HTTPVerb.POST).setUrl("Encounter");
+					bundle.addEntry()
+						.setFullUrl(FhirConstants.PATIENT + "/" + encounterResource.getIdElement().getIdPart())
+					    .setResource(encounterResource).getRequest()
+						.setMethod(Bundle.HTTPVerb.POST)
+						.setUrl("Encounter");
 					
 					Set<Obs> allObs = enc.getAllObs();
 					
@@ -440,16 +443,14 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 							observationResource.setCode(code);
 							
 							// Add observation to bundle
+						  	bundle.addEntry()
+								.setFullUrl(FhirConstants.PATIENT + "/" + observationResource.getIdElement().getIdPart())
+								.setResource(observationResource).getRequest().setMethod(Bundle.HTTPVerb.POST)
+								.setUrl("Observation");
 							
-
-              bundle.addEntry()
-                    .setFullUrl(FhirConstants.PATIENT + "/" + observationResource.getIdElement().getIdPart())
-                    .setResource(observationResource).getRequest().setMethod(Bundle.HTTPVerb.POST)
-                    .setUrl("Observation");
 						} else {
 							if (debugMode)
-									System.out
-											.println("rmsdataexchange Module: Observation has no LOINC Code and no SNOMED Code");
+									System.out.println("rmsdataexchange Module: Observation has no LOINC Code and no SNOMED Code");
 						}
 					}
 				}
