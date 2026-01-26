@@ -22,12 +22,17 @@ import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Reference;
+import org.openmrs.Concept;
+import org.openmrs.ConceptMap;
+import org.openmrs.ConceptMapType;
+import org.openmrs.ConceptReferenceTerm;
+import org.openmrs.ConceptSource;
 import org.openmrs.Encounter;
 import org.openmrs.Obs;
 import org.openmrs.Patient;
 import org.openmrs.PatientIdentifier;
-import org.openmrs.PatientIdentifierType;
 import org.openmrs.Visit;
+import org.openmrs.api.ConceptService;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.Daemon;
 import org.openmrs.module.fhir2.FhirConstants;
@@ -38,8 +43,6 @@ import org.openmrs.module.fhir2.api.translators.PatientTranslator;
 import org.openmrs.module.rmsdataexchange.RmsdataexchangeActivator;
 import org.openmrs.module.rmsdataexchange.api.RmsdataexchangeService;
 import org.openmrs.module.rmsdataexchange.api.util.AdviceUtils;
-import org.openmrs.module.rmsdataexchange.api.util.RMSModuleConstants;
-import org.openmrs.module.rmsdataexchange.queue.model.RMSQueueSystem;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.aop.AfterReturningAdvice;
 
@@ -59,6 +62,10 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	private EncounterTranslator<org.openmrs.Encounter> encounterTranslator;
 	
 	private ObservationTranslator observationTranslator;
+
+	private static final String LOINC_SYSTEM = "http://loinc.org";
+	
+	private static final String SNOMED_SYSTEM = "http://snomed.info/sct";
 	
 	// Identifier Type UUIDs (replace with real ones)
 	private static final String CR_ID_UUID = "24aedd37-b5be-4e08-8311-3721b8d5100d";
@@ -364,55 +371,86 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					Set<Obs> allObs = enc.getAllObs();
 					
 					for (Obs obs : allObs) {
-						org.hl7.fhir.r4.model.Observation observationResource = new org.hl7.fhir.r4.model.Observation();
-						if (observationTranslator != null) {
-							if (debugMode)
-								System.out
-								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Using observation translator to get the payload");
-							try {
-								observationResource = observationTranslator.toFhirResource(obs);
-							}
-							catch (Exception ex) {
+						Concept concept = obs.getConcept();
+
+						String loincCode = getLoincSameAsCode(concept.getConceptId());
+						String snomedCode = getSnomedCTSameAsCode(concept.getConceptId());
+
+						if(loincCode != null || snomedCode != null) {
+							org.hl7.fhir.r4.model.Observation observationResource = new org.hl7.fhir.r4.model.Observation();
+							if (observationTranslator != null) {
 								if (debugMode)
 									System.out
-									        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: observation translator error: "
-									                + ex.getMessage());
-								ex.printStackTrace();
+											.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Using observation translator to get the payload");
+								try {
+									observationResource = observationTranslator.toFhirResource(obs);
+								}
+								catch (Exception ex) {
+									if (debugMode)
+										System.out
+												.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: observation translator error: "
+														+ ex.getMessage());
+									ex.printStackTrace();
+									if (debugMode)
+										System.out
+												.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Using the service to convert to FHIR");
+									observationResource = rmsdataexchangeService.convertObservationToFhirResource(obs);
+								}
+							} else {
 								if (debugMode)
 									System.out
-									        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Using the service to convert to FHIR");
-								observationResource = rmsdataexchangeService.convertObservationToFhirResource(obs);
+											.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Manually constructing the payload");
+								
+								observationResource.setId(obs.getUuid());
 							}
+							
+							// Modify observation patient identifier
+							if (chosenId != null) {
+								Reference observationRef = observationResource.getSubject();
+								
+								if (observationRef != null && observationRef.getReference() != null) {
+									observationRef.setReference("Patient/" + chosenId);
+									observationResource.setSubject(observationRef);
+									if (debugMode)
+										System.out
+												.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Modified the observation subject to include a patient identifier");
+								}
+							} else {
+								if (debugMode)
+									System.out
+											.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient has no identifiers, we cant modify the observation subject");
+							}
+
+							// Modify the observation to have either the LOINC code or SNOMED code instead of openmrs UUID
+							CodeableConcept code = new CodeableConcept();
+							String display = concept.getName().getName();
+							if(loincCode != null) {
+								code.addCoding(new Coding()
+									.setSystem(LOINC_SYSTEM)
+									.setCode(loincCode)
+									.setDisplay(display)
+								);
+							}  else if (snomedCode != null) {
+								code.addCoding(new Coding()
+									.setSystem(SNOMED_SYSTEM)
+									.setCode(snomedCode)
+									.setDisplay(display)
+								);
+							}
+							observationResource.setCode(code);
+							
+							// Add observation to bundle
+							
+
+              bundle.addEntry()
+                    .setFullUrl(FhirConstants.PATIENT + "/" + observationResource.getIdElement().getIdPart())
+                    .setResource(observationResource).getRequest().setMethod(Bundle.HTTPVerb.POST)
+                    .setUrl("Observation");
 						} else {
 							if (debugMode)
-								System.out
-								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Manually constructing the payload");
-							
-							observationResource.setId(obs.getUuid());
-						}
-						
-						// Modify observation patient identifier
-						if (chosenId != null) {
-							Reference observationRef = observationResource.getSubject();
-							
-							if (observationRef != null && observationRef.getReference() != null) {
-								observationRef.setReference("Patient/" + chosenId);
-								observationResource.setSubject(observationRef);
-								if (debugMode)
 									System.out
-									        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Modified the observation subject to include a patient identifier");
-							}
-						} else {
-							if (debugMode)
-								System.out
-								        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient has no identifiers, we cant modify the observation subject");
+											.println("rmsdataexchange Module: Observation has no LOINC Code and no SNOMED Code");
 						}
-						
-						// Add observation to bundle
-						bundle.addEntry()
-						        .setFullUrl(FhirConstants.PATIENT + "/" + observationResource.getIdElement().getIdPart())
-						        .setResource(observationResource).getRequest().setMethod(Bundle.HTTPVerb.POST)
-						        .setUrl("Observation");
 					}
 				}
 				
@@ -445,6 +483,68 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 		}
 		
 		return (ret);
+	}
+
+	/**
+	 * Gets the LOINC code given a concept ID
+	 * @param conceptId
+	 * @return
+	 */
+	public String getLoincSameAsCode(Integer conceptId) {
+		ConceptService conceptService = Context.getConceptService();
+		Concept concept = conceptService.getConcept(conceptId);
+
+		if (concept == null) {
+			return null;
+		}
+
+		for (ConceptMap conceptMap : concept.getConceptMappings()) {
+			ConceptReferenceTerm term = conceptMap.getConceptReferenceTerm();
+			ConceptSource source = term.getConceptSource();
+			ConceptMapType mapType = conceptMap.getConceptMapType();
+
+			if (
+				mapType != null &&
+				"SAME-AS".equalsIgnoreCase(mapType.getName()) &&
+				source != null &&
+				"LOINC".equalsIgnoreCase(source.getName())
+			) {
+				return term.getCode();
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Gets the SNOMED CT code given a concept ID
+	 * @param conceptId
+	 * @return
+	 */
+	public String getSnomedCTSameAsCode(Integer conceptId) {
+		ConceptService conceptService = Context.getConceptService();
+		Concept concept = conceptService.getConcept(conceptId);
+
+		if (concept == null) {
+			return null;
+		}
+
+		for (ConceptMap conceptMap : concept.getConceptMappings()) {
+			ConceptReferenceTerm term = conceptMap.getConceptReferenceTerm();
+			ConceptSource source = term.getConceptSource();
+			ConceptMapType mapType = conceptMap.getConceptMapType();
+
+			if (
+				mapType != null &&
+				"SAME-AS".equalsIgnoreCase(mapType.getName()) &&
+				source != null &&
+				"SNOMED CT".equalsIgnoreCase(source.getName())
+			) {
+				return term.getCode();
+			}
+		}
+
+		return null;
 	}
 	
 	/**
