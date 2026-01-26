@@ -62,7 +62,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	private EncounterTranslator<org.openmrs.Encounter> encounterTranslator;
 	
 	private ObservationTranslator observationTranslator;
-
+	
 	private static final String LOINC_SYSTEM = "http://loinc.org";
 	
 	private static final String SNOMED_SYSTEM = "http://snomed.info/sct";
@@ -375,34 +375,34 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 					
 					for (Obs obs : allObs) {
 						Concept concept = obs.getConcept();
-
+						
 						String loincCode = getLoincSameAsCode(concept.getConceptId());
 						String snomedCode = getSnomedCTSameAsCode(concept.getConceptId());
-
-						if(loincCode != null || snomedCode != null) {
+						
+						if (loincCode != null || snomedCode != null) {
 							org.hl7.fhir.r4.model.Observation observationResource = new org.hl7.fhir.r4.model.Observation();
 							if (observationTranslator != null) {
 								if (debugMode)
 									System.out
-											.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Using observation translator to get the payload");
+									        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Using observation translator to get the payload");
 								try {
 									observationResource = observationTranslator.toFhirResource(obs);
 								}
 								catch (Exception ex) {
 									if (debugMode)
 										System.out
-												.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: observation translator error: "
-														+ ex.getMessage());
+										        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: observation translator error: "
+										                + ex.getMessage());
 									ex.printStackTrace();
 									if (debugMode)
 										System.out
-												.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Using the service to convert to FHIR");
+										        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Using the service to convert to FHIR");
 									observationResource = rmsdataexchangeService.convertObservationToFhirResource(obs);
 								}
 							} else {
 								if (debugMode)
 									System.out
-											.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Manually constructing the payload");
+									        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Manually constructing the payload");
 								
 								observationResource.setId(obs.getUuid());
 							}
@@ -416,29 +416,21 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 									observationResource.setSubject(observationRef);
 									if (debugMode)
 										System.out
-												.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Modified the observation subject to include a patient identifier");
+										        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Modified the observation subject to include a patient identifier");
 								}
 							} else {
 								if (debugMode)
 									System.out
-											.println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient has no identifiers, we cant modify the observation subject");
+									        .println("rmsdataexchange Module: Kisumu HIE Maternal Profile: Patient has no identifiers, we cant modify the observation subject");
 							}
-
+							
 							// Modify the observation to have either the LOINC code or SNOMED code instead of openmrs UUID
 							CodeableConcept code = new CodeableConcept();
 							String display = concept.getName().getName();
-							if(loincCode != null) {
-								code.addCoding(new Coding()
-									.setSystem(LOINC_SYSTEM)
-									.setCode(loincCode)
-									.setDisplay(display)
-								);
-							}  else if (snomedCode != null) {
-								code.addCoding(new Coding()
-									.setSystem(SNOMED_SYSTEM)
-									.setCode(snomedCode)
-									.setDisplay(display)
-								);
+							if (loincCode != null) {
+								code.addCoding(new Coding().setSystem(LOINC_SYSTEM).setCode(loincCode).setDisplay(display));
+							} else if (snomedCode != null) {
+								code.addCoding(new Coding().setSystem(SNOMED_SYSTEM).setCode(snomedCode).setDisplay(display));
 							}
 							observationResource.setCode(code);
 							
@@ -485,66 +477,60 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 		
 		return (ret);
 	}
-
+	
 	/**
 	 * Gets the LOINC code given a concept ID
+	 * 
 	 * @param conceptId
 	 * @return
 	 */
 	public String getLoincSameAsCode(Integer conceptId) {
 		ConceptService conceptService = Context.getConceptService();
 		Concept concept = conceptService.getConcept(conceptId);
-
+		
 		if (concept == null) {
 			return null;
 		}
-
+		
 		for (ConceptMap conceptMap : concept.getConceptMappings()) {
 			ConceptReferenceTerm term = conceptMap.getConceptReferenceTerm();
 			ConceptSource source = term.getConceptSource();
 			ConceptMapType mapType = conceptMap.getConceptMapType();
-
-			if (
-				mapType != null &&
-				"SAME-AS".equalsIgnoreCase(mapType.getName()) &&
-				source != null &&
-				"LOINC".equalsIgnoreCase(source.getName())
-			) {
+			
+			if (mapType != null && "SAME-AS".equalsIgnoreCase(mapType.getName()) && source != null
+			        && "LOINC".equalsIgnoreCase(source.getName())) {
 				return term.getCode();
 			}
 		}
-
+		
 		return null;
 	}
-
+	
 	/**
 	 * Gets the SNOMED CT code given a concept ID
+	 * 
 	 * @param conceptId
 	 * @return
 	 */
 	public String getSnomedCTSameAsCode(Integer conceptId) {
 		ConceptService conceptService = Context.getConceptService();
 		Concept concept = conceptService.getConcept(conceptId);
-
+		
 		if (concept == null) {
 			return null;
 		}
-
+		
 		for (ConceptMap conceptMap : concept.getConceptMappings()) {
 			ConceptReferenceTerm term = conceptMap.getConceptReferenceTerm();
 			ConceptSource source = term.getConceptSource();
 			ConceptMapType mapType = conceptMap.getConceptMapType();
-
-			if (
-				mapType != null &&
-				"SAME-AS".equalsIgnoreCase(mapType.getName()) &&
-				source != null &&
-				"SNOMED CT".equalsIgnoreCase(source.getName())
-			) {
+			
+			if (mapType != null && "SAME-AS".equalsIgnoreCase(mapType.getName()) && source != null
+			        && "SNOMED CT".equalsIgnoreCase(source.getName())) {
 				return term.getCode();
 			}
 		}
-
+		
 		return null;
 	}
 	
