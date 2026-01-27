@@ -1228,9 +1228,10 @@ public class AdviceUtils {
 		
 		return (ret);
 	}
-
+	
 	/**
 	 * Gets encounter types from the given comma separated string of encounter type uuids
+	 * 
 	 * @param encounterTypeUuids
 	 * @return
 	 */
@@ -1258,4 +1259,37 @@ public class AdviceUtils {
         return encounterTypes;
     }
 	
+	/**
+	 * Gets observation concepts from the given comma separated string of concept ids
+	 * 
+	 * @param conceptUuids
+	 * @return
+	 */
+	public static List<Concept> getObservationConceptsFromString(String conceptUuids) {
+        ConceptService conceptService = Context.getConceptService();
+        List<Concept> concepts = new ArrayList<>();
+
+        if (conceptUuids == null || conceptUuids.trim().isEmpty()) {
+            return concepts;
+        }
+
+        String[] uuids = conceptUuids.split(",");
+
+        for (String uuid : uuids) {
+            String trimmedUuId = uuid.trim();
+            if (!trimmedUuId.isEmpty()) {
+                try {
+                    // Integer conceptUuId = Integer.valueOf(trimmedUuId);
+                    Concept concept = conceptService.getConceptByUuid(trimmedUuId);
+                    if (concept != null) {
+                        concepts.add(concept);
+                    }
+                } catch (Exception e) {
+                    // invalid concept id, ignore
+                }
+            }
+        }
+
+        return concepts;
+    }
 }
