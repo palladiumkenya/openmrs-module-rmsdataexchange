@@ -6,6 +6,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -1227,5 +1228,34 @@ public class AdviceUtils {
 		
 		return (ret);
 	}
+
+	/**
+	 * Gets encounter types from the given comma separated string of encounter type uuids
+	 * @param encounterTypeUuids
+	 * @return
+	 */
+	public static List<EncounterType> getEncounterTypesFromString(String encounterTypeUuids) {
+        EncounterService encounterService = Context.getEncounterService();
+        List<EncounterType> encounterTypes = new ArrayList<>();
+
+        if (encounterTypeUuids == null || encounterTypeUuids.trim().isEmpty()) {
+            return encounterTypes;
+        }
+
+        String[] uuids = encounterTypeUuids.split(",");
+
+        for (String uuid : uuids) {
+            String trimmedUuid = uuid.trim();
+            if (!trimmedUuid.isEmpty()) {
+                EncounterType encounterType =
+                        encounterService.getEncounterTypeByUuid(trimmedUuid);
+                if (encounterType != null) {
+                    encounterTypes.add(encounterType);
+                }
+            }
+        }
+
+        return encounterTypes;
+    }
 	
 }
