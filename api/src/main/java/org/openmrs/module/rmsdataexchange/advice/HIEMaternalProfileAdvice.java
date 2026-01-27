@@ -71,7 +71,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 	// Identifier Type UUIDs
 	private static final String CR_ID_UUID = "24aedd37-b5be-4e08-8311-3721b8d5100d";
 	
-	private static final String NATIONAL_ID_UUID = "24aedd37-b5be-4e08-8311-3721b8d5100d";
+	private static final String NATIONAL_ID_UUID = "49af6cdc-7968-4abb-bf46-de10d7f4859f";
 	
 	private static final String OPENMRS_ID_UUID = "dfacd928-0370-4315-99d7-6ec1c9f7ae76";
 	
@@ -576,7 +576,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 			ConceptMapType mapType = conceptMap.getConceptMapType();
 			
 			if (mapType != null && "SAME-AS".equalsIgnoreCase(mapType.getName()) && source != null
-			        && source.getName().trim().toUpperCase().startsWith("SNOMED")) {
+			        && "SNOMED CT".equalsIgnoreCase(source.getName())) {
 				return term.getCode();
 			}
 		}
