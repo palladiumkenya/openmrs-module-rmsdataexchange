@@ -77,6 +77,9 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 
 	// Comma separated list of encounter types to process in this event
 	private static final String encounterTypes = "c6d09e05-1f25-4164-8860-9f32c5a02df0";
+
+	// Comma separated list of observation concepts to process in this event
+	private static final String observationConcepts = "c6d09e05-1f25-4164-8860-9f32c5a02df0";
 	
 	public PatientTranslator getPatientTranslator() {
 		return patientTranslator;
@@ -538,7 +541,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 			ConceptMapType mapType = conceptMap.getConceptMapType();
 			
 			if (mapType != null && "SAME-AS".equalsIgnoreCase(mapType.getName()) && source != null
-			        && "SNOMED CT".equalsIgnoreCase(source.getName())) {
+			        && source.getName().trim().toUpperCase().startsWith("SNOMED")) {
 				return term.getCode();
 			}
 		}
