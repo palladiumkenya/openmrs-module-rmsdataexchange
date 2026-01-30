@@ -576,7 +576,7 @@ public class HIEMaternalProfileAdvice implements AfterReturningAdvice {
 			ConceptMapType mapType = conceptMap.getConceptMapType();
 			
 			if (mapType != null && "SAME-AS".equalsIgnoreCase(mapType.getName()) && source != null
-			        && "SNOMED CT".equalsIgnoreCase(source.getName())) {
+			        && source.getName().trim().toUpperCase().startsWith("SNOMED")) {
 				return term.getCode();
 			}
 		}
